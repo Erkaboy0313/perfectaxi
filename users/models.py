@@ -63,7 +63,6 @@ class User(AbstractUser,ModelWithTimestamps):
             self.save()
         return super().delete(**kwargs)
 
-
 class Admin(User):
     """Админ"""
     objects = AdminManager()
@@ -76,23 +75,62 @@ class Admin(User):
         proxy = True
         verbose_name_plural = 'Admin'
 
-
 class Driver(models.Model):
-    """Разработчик"""
+    """Haydovchi"""
+
+    class DriverStatus(models.TextChoices):
+        ACTIVE = 'active'
+        BUSY = 'busy'
+
     user = models.OneToOneField(User,on_delete=models.CASCADE)
+    profile_image = models.FileField(null=True)
+    car_images = models.ManyToManyField('DocumentImages',related_name='car_images')
+    car_tex_passport_images = models.ManyToManyField('DocumentImages',related_name='car_text_images')
+    license_images = models.ManyToManyField('DocumentImages',related_name='license_images')
+    car_model = models.CharField(max_length=200,null=True)
+    status = models.CharField(max_length=20,choices=DriverStatus.choices,default=DriverStatus.ACTIVE)
     car_name = models.CharField(max_length=100,null=True)
     car_number = models.CharField(max_length=200,null=True)
-    objects = DriverManager
-    class Meta(User.Meta):
-        verbose_name_plural = 'Driver'
+    car_color = models.CharField(max_length=100,null=True)
+    car_manufactured_date = models.DateField(null=True)
+    car_tex_passport_date = models.DateField(null=True)
+    license_date = models.DateField(null=True)
+    luggage = models.BooleanField(default=False)
+    airconditioner = models.BooleanField(default=False)
+    inmark = models.BooleanField(default=False)
 
+    objects = DriverManager
+
+    def __str__(self):
+        return self.user
+
+    class Meta(User.Meta):
+        verbose_name_plural = 'Drivers'
 
 class Client(models.Model):
     """Покупатель"""
+
+    class PaymentType(models.TextChoices):
+        CASH = 'cash'
+        CARD = 'card'
+
     user = models.OneToOneField(User,on_delete=models.CASCADE)
+    payment_type = models.CharField(max_length=4,choices=PaymentType.choices)
+    rejected_orders = models.PositiveIntegerField()
+
     objects = DriverManager
+
+    @property
+    def order_rejected(self):
+        self.rejected_orders += 1
+        self.save()
+
     class Meta(User.Meta):
         verbose_name_plural = 'Client'
+
+class DocumentImages(models.Model):
+    image = models.FileField(upload_to='UserDocuments/')
+
 
 class Code(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -107,3 +145,5 @@ class Code(models.Model):
 
     def __str__(self):
         return f"{self.user.username} | {self.number}"
+
+
