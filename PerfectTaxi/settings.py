@@ -46,6 +46,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'ws.apps.WsConfig',
+    'category',
+    'creditCard',
+    'feedback',
+    'notification',
+    'order',
+    'payment',
+    'pricing',
     'rest_framework',
     'rest_framework.authtoken',
     "debug_toolbar",
@@ -87,6 +94,7 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DATETIME_FORMAT': '%d-%m-%Y %H:%M'
 }
 
 CHANNEL_LAYERS = {

@@ -1,16 +1,16 @@
-from datetime import datetime
-from django.contrib.auth.hashers import check_password, make_password
-from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
-from django.utils import timezone
-import uuid
 from django.conf import settings
 
 from PerfectTaxi.exceptions import BaseAPIException
 
 from .models import User,Driver,Client,Admin,Code,DocumentImages
 
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['name','phone']
 
 class RegistrationSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=['client', 'driver'])
@@ -93,7 +93,7 @@ class TestVerifySerializer(serializers.Serializer):
 class VerifySerializer(serializers.Serializer):
     code = serializers.CharField()
     user = serializers.IntegerField()
-
+    
     def save(self,**kwargs):
         try:
             user: User = User.objects.get(id = user)
@@ -109,7 +109,6 @@ class VerifySerializer(serializers.Serializer):
         token, __ = Token.objects.get_or_create(user=user)
         return {'token': token.key}
     
-
 class DocumentImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentImages
@@ -119,11 +118,13 @@ class DriverSerializer(serializers.ModelSerializer):
     car_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     car_tex_passport_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     license_images = serializers.ListField(child = serializers.FileField(),write_only = True)
+    user = UserSerializer()
     class Meta:
         model = Driver
-        exclude = ['user']
+        fields = '__all__'
         extra_kwargs = {
-            'status': {'read_only': True}
+            'status': {'read_only': True},
+            'user': {'read_only': True}
             }
         depth = 1
 
@@ -160,6 +161,23 @@ class DriverSerializer(serializers.ModelSerializer):
             obj['car_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_images.all()]
             obj['car_tex_passport_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_tex_passport_images.all()]
             obj['license_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.license_images.all()]
+        for key,value in obj['user'].items():
+            obj[key] = value
+        del obj['user']
         return obj
 
-
+class ClientSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    class Meta:
+        model = Client
+        fields = ['id','user','payment_type']
+        extra_kwargs = {
+            'user':{"read_only":True}
+        }
+    
+    def to_representation(self, instance):
+        obj = super().to_representation(instance)
+        for key,value in obj['user'].items():
+            obj[key] = value
+        del obj['user']
+        return obj

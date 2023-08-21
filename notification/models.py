@@ -11,7 +11,7 @@ class Notification(models.Model):
 
     client = models.ForeignKey(Client,on_delete=models.CASCADE,null=True)
     driver = models.ForeignKey(Driver,on_delete=models.CASCADE,null=True)
-    type = models.CharField(choices=NotificationType.choices)
+    type = models.CharField(max_length=20,choices=NotificationType.choices)
     message = models.TextField()
     time = models.DateTimeField(auto_now_add=True)
 
@@ -25,7 +25,7 @@ class News(models.Model):
         DRIVER = 'driver'
         CLIENT = 'client'
 
-    receiver = models.CharField(choices=Receiver.choices)
+    receiver = models.CharField(max_length=20,choices=Receiver.choices)
     message = models.TextField()
     time = models.DateTimeField(auto_now_add=True)
 

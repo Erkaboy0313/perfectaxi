@@ -62,6 +62,9 @@ class User(AbstractUser,ModelWithTimestamps):
             self.email = "{}:{}".format(self.email, int(datetime.timestamp(datetime.now())))
             self.save()
         return super().delete(**kwargs)
+    
+    def __str__(self):
+        return f"{self.name} {self.phone}"
 
 class Admin(User):
     """Админ"""
@@ -102,7 +105,7 @@ class Driver(models.Model):
     objects = DriverManager
 
     def __str__(self):
-        return self.user
+        return f"{self.user}"
 
     class Meta(User.Meta):
         verbose_name_plural = 'Drivers'
@@ -115,7 +118,7 @@ class Client(models.Model):
         CARD = 'card'
 
     user = models.OneToOneField(User,on_delete=models.CASCADE)
-    payment_type = models.CharField(max_length=4,choices=PaymentType.choices)
+    payment_type = models.CharField(max_length=4,choices=PaymentType.choices,default=PaymentType.CASH)
     rejected_orders = models.PositiveIntegerField()
 
     objects = DriverManager
@@ -127,6 +130,9 @@ class Client(models.Model):
 
     class Meta(User.Meta):
         verbose_name_plural = 'Client'
+
+    def __str__(self):
+        return str(self.user)
 
 class DocumentImages(models.Model):
     image = models.FileField(upload_to='UserDocuments/')

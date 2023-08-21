@@ -6,7 +6,7 @@ from order.models import Order
 
 class Balance(models.Model):
     driver = models.OneToOneField(Driver,on_delete=models.SET_NULL,null=True)
-    id = models.IntegerField()
+    id_number = models.IntegerField()
     fund = models.FloatField()
 
     def __str__(self):

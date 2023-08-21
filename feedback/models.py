@@ -15,7 +15,7 @@ class Reson(models.Model):
         PROBLEM = 'problem'
         COMFORT = 'comfort'
 
-    type = models.CharField(choices=ResonType.choices,null=True)
+    type = models.CharField(max_length=20,choices=ResonType.choices,null=True)
     icon = models.ImageField(upload_to='Problems/')
     name = models.CharField(max_length=100,null=True)
 
