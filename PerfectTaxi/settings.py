@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     'pricing',
     'rest_framework',
     'rest_framework.authtoken',
-    "debug_toolbar",
+    "debug_toolbar"
 ]
 
 MIDDLEWARE = [
