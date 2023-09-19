@@ -19,6 +19,7 @@ class Order(models.Model):
     start_point = models.CharField(max_length=40, null=True,blank=True)
     ordered_time = models.DateTimeField(auto_now_add=True,blank=True)
     taken_time = models.DateTimeField(null=True,blank=True)
+    complated_time = models.DateTimeField(null=True,blank=True)
     rejected_time = models.DateTimeField(null=True,blank=True)
     distance = models.FloatField(null=True,blank=True)
     price = models.FloatField(null=True,blank=True)

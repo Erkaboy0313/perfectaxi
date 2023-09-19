@@ -81,6 +81,7 @@ class DriverViewSet(viewsets.ModelViewSet):
     queryset = Driver.objects.select_related('user').prefetch_related('car_images').prefetch_related('car_tex_passport_images').prefetch_related('license_images')
     serializer_class = serializers.DriverSerializer
     http_method_names = ['put','patch','delate','get']
+    permission_classes = (IsActive,)
 
     def get_serializer(self, *args, **kwargs):
         serializer_class = self.get_serializer_class()

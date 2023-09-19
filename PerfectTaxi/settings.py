@@ -55,7 +55,9 @@ INSTALLED_APPS = [
     'pricing',
     'rest_framework',
     'rest_framework.authtoken',
-    "debug_toolbar"
+    "debug_toolbar",
+    'django_celery_results',
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -87,6 +89,7 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'PerfectTaxi.wsgi.application'
 ASGI_APPLICATION = 'PerfectTaxi.asgi.application'
 
@@ -98,10 +101,33 @@ REST_FRAMEWORK = {
 }
 
 CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+CELERY_RESULT_BACKEND = 'django-db'
+
+CELERY_CACHE_BACKEND = 'default'
+
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+CACHES = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://127.0.0.1:6379/1",
+        "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        "KEY_PREFIX": "PTaxi",
     }
 }
+
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

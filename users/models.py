@@ -11,7 +11,7 @@ class ModelWithTimestamps(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='created_at')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='updated_at')
     class Meta:
-        abstract = True
+        abstract = True 
 
 # Create your models here.
 class User(AbstractUser,ModelWithTimestamps):
@@ -103,6 +103,10 @@ class Driver(models.Model):
     inmark = models.BooleanField(default=False)
 
     objects = DriverManager
+
+    @property
+    def name(self):
+        return self.user.name
 
     def __str__(self):
         return f"{self.user}"
