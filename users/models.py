@@ -123,7 +123,7 @@ class Client(models.Model):
 
     user = models.OneToOneField(User,on_delete=models.CASCADE)
     payment_type = models.CharField(max_length=4,choices=PaymentType.choices,default=PaymentType.CASH)
-    rejected_orders = models.PositiveIntegerField()
+    rejected_orders = models.PositiveIntegerField(default=0,blank=True)
 
     objects = DriverManager
 
