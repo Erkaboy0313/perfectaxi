@@ -7,7 +7,7 @@ class Feedback(models.Model):
     driver = models.ForeignKey(Driver,on_delete=models.CASCADE)
     mark = models.PositiveIntegerField()
     resons = models.ManyToManyField('Reson')
-
+    time = models.DateField(null=True,blank=True,auto_now_add=True)
 
 class Reson(models.Model):
 
@@ -16,8 +16,9 @@ class Reson(models.Model):
         COMFORT = 'comfort'
 
     type = models.CharField(max_length=20,choices=ResonType.choices,null=True)
-    icon = models.ImageField(upload_to='Problems/')
+    icon = models.FileField(upload_to='Problems/')
     name = models.CharField(max_length=100,null=True)
 
     def __str__(self):
         return self.name
+    

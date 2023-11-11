@@ -101,12 +101,15 @@ class Driver(models.Model):
     luggage = models.BooleanField(default=False)
     airconditioner = models.BooleanField(default=False)
     inmark = models.BooleanField(default=False)
-
     objects = DriverManager
 
     @property
     def name(self):
         return self.user.name
+
+    @property
+    def phone(self):
+        return self.user.phone
 
     def __str__(self):
         return f"{self.user}"
@@ -128,6 +131,14 @@ class Client(models.Model):
     objects = DriverManager
 
     @property
+    def name(self):
+        return self.user.name
+
+    @property
+    def phone(self):
+        return self.user.phone
+
+    @property
     def order_rejected(self):
         self.rejected_orders += 1
         self.save()
@@ -140,7 +151,6 @@ class Client(models.Model):
 
 class DocumentImages(models.Model):
     image = models.FileField(upload_to='UserDocuments/')
-
 
 class Code(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)

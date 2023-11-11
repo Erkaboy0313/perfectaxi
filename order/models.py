@@ -1,6 +1,7 @@
 from django.db import models
 from users.models import Client,Driver
 from .managers import SeriviseManger
+from django.utils import timezone
 # Create your models here.
 
 class Order(models.Model):
@@ -19,6 +20,8 @@ class Order(models.Model):
     start_point = models.CharField(max_length=40, null=True,blank=True)
     ordered_time = models.DateTimeField(auto_now_add=True,blank=True)
     taken_time = models.DateTimeField(null=True,blank=True)
+    arived_time = models.DateTimeField(null=True,blank=True)
+    started_time = models.DateTimeField(null=True,blank=True)
     complated_time = models.DateTimeField(null=True,blank=True)
     rejected_time = models.DateTimeField(null=True,blank=True)
     distance = models.FloatField(null=True,blank=True)
@@ -31,10 +34,39 @@ class Order(models.Model):
     def __str__(self):
         return f"{self.client} - {self.driver} - {self.ordered_time} - {self.status}"
     
+    @property
+    def category(self):
+        return self.carservice.service
+    
+    @property
+    def service(self):
+        return [x.name for x in self.services.all()]
+    
+    @property
+    def client_name(self):
+        return self.client.user.name
+
     def save(self, *args, **kwargs):
-        if not self.contact_number:
+        time = timezone.now()
+        if 'finish' in kwargs:
+            del kwargs['finish']
+            self.complated_time = time
+            wait_time = (self.started_time - self.arived_time).total_seconds() / 60
+            if int(wait_time) > 3:
+                self.price += int(wait_time - 3) * 500
+        if "arrive" in kwargs:
+            del kwargs['arrive']
+            self.arived_time = time
+        if "start" in kwargs:
+            del kwargs['start']
+            self.started_time = time
+        if "reject" in kwargs:
+            del kwargs['reject']
+            self.rejected_time = time
+        
+        if not self.contact_number and not self.payment_type:
             self.contact_number = self.client.user.phone
-        self.payment_type = self.client.payment_type
+            self.payment_type = self.client.payment_type
         return super().save(*args, **kwargs)
 
     class Meta:

@@ -1,15 +1,16 @@
-from utils.cache_functions import getKeys,getKey
+from utils.cordinates import find_nearest_drivers,FindRoute
 
+def findCloseDriver(location = None):
+    long,lat = tuple(map(float,location.split(',')))
+    drivers = find_nearest_drivers(lat,long,2000,10)
+    return drivers
 
-
-def findCloseDriver(location = None,order= None):
-    # should find available and closest drivers
-    
-    online_drivers = getKeys('DL_*')
-    blacklist = getKey(f'b{order}')
-    drivers = [getKey(x) for x in online_drivers]
-
-    if blacklist:
-        return [x for x in drivers if x not in blacklist]
-    else:
-        return drivers
+def OrderDriversByRoute(drivers,destination):
+    long,lat = tuple(map(float,destination.split(',')))
+    route = FindRoute()
+    times = route.find_route(drivers,f"{lat},{long}")
+    if times:
+        for i in range(len(drivers)):
+            drivers[i].append(times[i])
+        return list(sorted(drivers,key=lambda x: x[3]))
+    return drivers

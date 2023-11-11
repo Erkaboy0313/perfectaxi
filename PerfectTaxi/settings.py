@@ -12,29 +12,22 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
-from dotenv import dotenv_values
 
-env_conf = dotenv_values('.env')
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env_conf.get('SECRET_KEY')
+# DEBUG = True
+DEBUG = int(os.environ.get('DEBUG',0))
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env_conf.get('DEBUG', True)
-
+# ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS','127.0.0.1 localhost').split(' ')
 ALLOWED_HOSTS = ['*']
 
+CORS_ORIGIN_ALLOW_ALL = True
+
 HOST ='http://127.0.0.1:8000' if DEBUG else 'https://api.perfecttaxi.uz'
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'daphne',
@@ -58,12 +51,14 @@ INSTALLED_APPS = [
     "debug_toolbar",
     'django_celery_results',
     "django_celery_beat",
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -104,52 +99,58 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [(os.environ.get('REDIS_HOST'), 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-
+CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST")}:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
-
 CELERY_RESULT_BACKEND = 'django-db'
-
 CELERY_CACHE_BACKEND = 'default'
-
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+
+CSRF_COOKIE_SECURE = False
+CORS_ALLOW_CREDENTIALS = True
 
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOST')}:6379/1",
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         "KEY_PREFIX": "PTaxi",
     }
 }
 
-
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': BASE_DIR / 'db.sqlite3',
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'taxi',
-        'USER': 'taxiadmin',
-        'PASSWORD': 'taxiadmin',
-        'HOST': 'localhost',
-        'PORT': '',
+        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
+        'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
+        'USER': os.environ.get("SQL_USER", "eric"),
+        'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
+        'HOST': os.environ.get("SQL_HOST", "localhost"),
+        'PORT': os.environ.get("SQL_PORT", "5432"),
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': 'taxi',
+    #     'USER': 'taxiadmin',
+    #     'PASSWORD': 'taxiadmin',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    # }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': 'ptaxi',
+    #     'USER': 'eric',
+    #     'PASSWORD': 'nevergiveup3',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    # }
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 AUTH_USER_MODEL = 'users.User'
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -166,10 +167,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/4.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
@@ -178,10 +175,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
 STATIC_URL = 'staticfiles/'
 STATIC_ROOT  =  os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = (
@@ -189,9 +182,6 @@ STATICFILES_DIRS = (
 )
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 INTERNAL_IPS = [

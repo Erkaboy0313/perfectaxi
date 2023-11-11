@@ -5,7 +5,8 @@ class Card(models.Model):
     user = models.ForeignKey("users.Client",on_delete=models.CASCADE)
     cardNumber = models.CharField(max_length=20)
     cardExpireDate = models.CharField(max_length=5)
-    cvc = models.CharField(max_length=3)
+    cvc = models.CharField(max_length=3,null=True,blank=True)
+    verified = models.BooleanField(default=False,blank=True)
 
     def __str__(self):
         return f"{self.cardNumber} {self.user}"

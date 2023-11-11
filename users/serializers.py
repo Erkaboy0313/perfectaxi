@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from django.conf import settings
-
+from payment.models import Balance
 from PerfectTaxi.exceptions import BaseAPIException
 
 from .models import User,Driver,Client,Admin,Code,DocumentImages
@@ -76,7 +76,9 @@ class TestVerifySerializer(serializers.Serializer):
         data = self.validated_data
         try:
             if data['role'] == "driver":
-                user = Driver.objects.get(id = data['user']).user
+                driver = Driver.objects.get(id = data['user'])
+                Balance.objects.get_or_create(driver = driver)
+                user = driver.user
             elif data['role'] == "client":
                 user = Client.objects.get(id = data['user']).user
             if int(data['code']) != 66666:
@@ -181,3 +183,10 @@ class ClientSerializer(serializers.ModelSerializer):
             obj[key] = value
         del obj['user']
         return obj
+
+class DriverInfoSeriazer(serializers.ModelSerializer):
+    name = serializers.CharField()
+    phone = serializers.CharField()
+    class Meta:
+        model = Driver
+        fields = ['name','phone','car_name','car_number','car_color']

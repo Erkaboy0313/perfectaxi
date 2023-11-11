@@ -1,0 +1,81 @@
+version: '3.9'
+
+services:
+
+  redis-dev:
+    image: redis:7-alpine
+    container_name: redis-dev
+    # restart: 
+
+  perfectaxi-dev:
+    restart: always
+    build: 
+      context: .
+      dockerfile: dockerfile.dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/home/perfectaxi-dev
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    depends_on:
+      - db-dev
+  
+  db-dev:
+    image: postgres:16.0-alpine
+    volumes:
+      - postgres_data_ptaxi:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=ptaxi
+      - POSTGRES_USER=ptaxi_user
+      - POSTGRES_PASSWORD=ptaxi_user_password
+  
+  celery-worker-dev:
+    build: 
+      context: .
+      dockerfile: dockerfile.dev
+    container_name: celery-worker-dev
+    command: celery -A PerfectTaxi worker -l INFO
+    restart: always
+    environment:
+      - CELERY_BROKER_URL=redis://redis-dev:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - perfectaxi-dev
+      - redis-dev
+      - db-dev
+
+  celery-beat-dev:
+    build: 
+      context: .
+      dockerfile: dockerfile.dev
+    container_name: celery-beat-dev
+    command: celery -A PerfectTaxi beat -l INFO
+    restart: always
+    environment:
+      - CELERY_BROKER_URL=redis://redis-dev:6379/0
+    env_file:
+      - .env
+    depends_on:
+      - perfectaxi-dev
+      - redis-dev
+      - db-dev
+
+  daphne-dev:
+    build:
+      context: .
+      dockerfile: dockerfile.dev
+    container_name: daphne-dev
+    env_file:
+      - .env
+    command: daphne PerfectTaxi.asgi:application -b 0.0.0.0 -p 8000
+    restart: always
+    depends_on:
+      - perfectaxi-dev
+      - redis-dev
+      - db-dev
+
+volumes:
+  postgres_data_ptaxi:
