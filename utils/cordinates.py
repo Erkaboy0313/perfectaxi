@@ -125,55 +125,75 @@ COORDINATES = [
     (41.310147, 69.276663),
     (41.303152, 69.251763),
 ]
-import redis
-import requests
-import json
-from utils.calculateDistance import caculateDistance
-import os
-redis_client = redis.Redis(host=os.environ.get('REDIS_HOST'), port=6379, db=0)
 
+import redis,json,os,aiohttp
+from utils.calculateDistance import caculateDistance
+from .cache_functions import setKey
+
+redis_client = redis.Redis(host=os.environ.get('REDIS_HOST1',"127.0.0.1"), port=6379, db=0)
 
 class FindRoute:
+    
     def __init__(self):
         self.__BASE_URL = 'http://router.project-osrm.org/'
         self.__MATRIX = 'table/v1/driving/'
         self.__ROUTE = 'route/v1/driving/'
 
-    def find_drive(self,start,points):
-        def reverse(point):
-            long,lat = point.split(',')
-            res = f"{lat},{long}"
-            return res.strip()
-        if points:
-            cordinate = reverse(start)
-            cordinate += ";"+(';'.join(list(map(reverse,points))))
-            url = self.__BASE_URL + self.__ROUTE + cordinate
-            response = requests.get(url)
-            if response.status_code == 200:
-                data = json.loads(response.text)
-                return data['routes'][0]['distance'] / 1000
-            else:
-                return caculateDistance(start,points)
-        else:
-            return 0
+    async def reverse(self,point):
+        long,lat = point.split(',')
+        res = f"{lat},{long}"
+        return res.strip()
 
-    def find_route(self,source,destination):
+    async def fetch_url(self,url):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                return response.status, await response.text()
+
+    async def find_drive(self,start,points):
+
+        if points:
+            cordinate = await self.reverse(start)
+            cordinate += ";"+(';'.join([await self.reverse(x) for x in points]))
+            url = self.__BASE_URL + self.__ROUTE + cordinate
+            status,text = await self.fetch_url(url)
+            if status == 200:
+                data = json.loads(text)
+                return round(data['routes'][0]['distance'] / 1000,1),round(data['routes'][0]['duration']/60)
+            else:
+                return await caculateDistance(start,points)
+        else:
+            return 0,0
+    
+    async def find_distance_time(self,start,stop):
+        cordinate = f"{await self.reverse(start)};{await self.reverse(stop)}"
+        url = self.__BASE_URL + self.__ROUTE + cordinate
+        status,text = await self.fetch_url(url)
+        if status == 200:
+            data = json.loads(text)
+            return [round(data['routes'][0]['distance'] / 1000,1),data['routes'][0]['duration']]
+        else:
+            return await caculateDistance(start,[stop])
+
+    async def find_route(self,source,destination):
         
         sources = []
         for driver in source:
-            sources.append(f"{driver[2][0]},{driver[2][1]}")
+            sources.append(f"{driver[2][1]},{driver[2][0]}")
+            
         indexes = ';'.join(list(map(str,list(range(len(sources))))))
         source = ';'.join(sources)
-
         coordinate = f"{source};{destination}?sources={indexes}&destinations={len(sources)}"
-        respose = requests.get(self.__BASE_URL+self.__MATRIX+coordinate)
-        data = json.loads(respose.text)
-        if respose.status_code == 200:
+        status,text = await self.fetch_url(self.__BASE_URL+self.__MATRIX+coordinate)
+        data = json.loads(text)
+        if status == 200:
             return data['durations']
         else:
-            return False
+            return False    
         
-def update_driver_location(driver_id, longitude, latitude):
+async def update_driver_location(driver_id, longitude, latitude):
+    prev_loc = await retrieve_location(driver_id)
+    if prev_loc:
+        await setKey(f"prev_loc_{driver_id}",f"{prev_loc[1]},{prev_loc[0]}")
     redis_client.geoadd('driver_locations',(longitude,latitude,driver_id))
 
 def find_nearest_drivers(longitude, latitude, radius, count):
@@ -183,16 +203,25 @@ def find_nearest_drivers(longitude, latitude, radius, count):
 def remove_location(id):
     redis_client.zrem("driver_locations",id)
 
-def retrieve_location(id):
+async def retrieve_location(id):
     return redis_client.geopos('driver_locations',id)[0]
 
-def PopulateLocations():
+async def PopulateLocations():
     for id,location in enumerate(COORDINATES):
         update_driver_location(id,location[1],location[0])
     else:
         print("populated")
 
 
-route = FindRoute()
-route.find_drive('41.286384, 69.227279',['41.296296, 69.216240','41.260209, 69.197470'])
+# route = FindRoute()
+# d = route.find_drive('41.286384,69.227279',['41.304512, 69.289765'])
+# print(d)
+# d = route.find_distance_time('41.286384,69.227279','41.304512, 69.289765')
+# print(d)
 
+
+# destination = "69.227279,41.286384"
+# sources = [[1,1,(41.304512, 69.289765)],[1,1,(41.300815, 69.278686)],[1,1,(41.303104, 69.271974)],[1,1,(41.308653, 69.269066)]]
+
+# x = route.find_route(sources,destination)
+# print(x)

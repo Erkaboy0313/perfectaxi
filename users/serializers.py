@@ -1,43 +1,48 @@
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from django.conf import settings
-from payment.models import Balance
 from PerfectTaxi.exceptions import BaseAPIException
-
-from .models import User,Driver,Client,Admin,Code,DocumentImages
-
+from .models import User,Driver,Client,Code,DocumentImages,DriverAvailableService
+from feedback.tasks import populate_mark
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['name','phone']
+        fields = ['first_name','last_name','phone']
 
 class RegistrationSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=['client', 'driver'])
-    name = serializers.CharField(required=True)
     phone = serializers.CharField()
  
     class Meta:
         model = User
-        fields = ['role', 'name', 'phone']
+        fields = ['role', 'phone']
 
     def create(self, validated_data):
-        if User.objects.exist_user(validated_data):
-            raise BaseAPIException("Foydalanuvchi allaqachon ro'yxatdan o'tgan")
         username = f"{validated_data['role']}_{validated_data['phone']}"
         validated_data['username'] = username
-        self.instance = super().create(validated_data)
-        if self.instance.role == self.instance.UserRole.DRIVER:
-            user = Driver.objects.create(user = self.instance)
-        elif self.instance.role == self.instance.UserRole.CLIENT:
-            user = Client.objects.create(user = self.instance)
+        base_user,created = User.objects.get_or_create(**validated_data)
+        if created:
+            if base_user.role == base_user.UserRole.DRIVER:
+                user = Driver.objects.create(user = base_user)
+            elif base_user.role == base_user.UserRole.CLIENT:
+                user = Client.objects.create(user = base_user)
+        else:
+            if base_user.role == base_user.UserRole.DRIVER:
+                user = Driver.objects.get(user = base_user)
+            elif base_user.role == base_user.UserRole.CLIENT:
+                user = Client.objects.get(user = base_user)
 
-        code,created = Code.objects.get_or_create(user=self.instance)
+        code,created = Code.objects.get_or_create(user=base_user)
+        
         if not created:
             code.save()
+
+        # ---------- Send Verification code ------------#
         # data = send_verification_sms(user.phone,code.number)
         # return data[1]
-        return ('kod yuborildi',user)
+
+        return ('kod yuborildi',user.id)
 
 class LoginSerializer(serializers.Serializer):
     phone = serializers.CharField()
@@ -76,21 +81,24 @@ class TestVerifySerializer(serializers.Serializer):
         data = self.validated_data
         try:
             if data['role'] == "driver":
-                driver = Driver.objects.get(id = data['user'])
-                Balance.objects.get_or_create(driver = driver)
-                user = driver.user
+                user = Driver.objects.get(id = data['user']).user
             elif data['role'] == "client":
                 user = Client.objects.get(id = data['user']).user
+            
+            #temporary should be specific login for admin.
+            elif data['role'] == 'admin':
+                user = User.objects.get(id = data['user'])
+                
             if int(data['code']) != 66666:
                 raise BaseAPIException('Kod notogri kiritildi')
             if user.blocked_at:
                 raise BaseAPIException("Foydalanuvchi bloklangan")
             if not user.confirmed_at:
                 user.confirm
-        except BaseException:
+        except BaseException as e:
             raise BaseAPIException("Foydalanuvchi topilmadi")
         token, __ = Token.objects.get_or_create(user=user)
-        return {'token': token.key}
+        return {'token': token.key, "profile":user.complete_profile}
 
 class VerifySerializer(serializers.Serializer):
     code = serializers.CharField()
@@ -120,6 +128,8 @@ class DriverSerializer(serializers.ModelSerializer):
     car_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     car_tex_passport_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     license_images = serializers.ListField(child = serializers.FileField(),write_only = True)
+    first_name = serializers.CharField(write_only = True)
+    last_name = serializers.CharField(write_only = True)
     user = UserSerializer()
     class Meta:
         model = Driver
@@ -137,6 +147,10 @@ class DriverSerializer(serializers.ModelSerializer):
         license_images = self.validated_data.pop('license_images',[])
         obj = super().save(**kwargs)
         self.save_images(obj,car_images,car_tex_passport_images,license_images)
+        obj.user.first_name = self.validated_data['first_name']
+        obj.user.last_name = self.validated_data['last_name']
+        obj.user.complete_profile = True
+        obj.user.save()
         return obj
     
     def save_images(self,obj,car_images,car_tex_passport_images,license_images):
@@ -176,7 +190,7 @@ class ClientSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'user':{"read_only":True}
         }
-    
+
     def to_representation(self, instance):
         obj = super().to_representation(instance)
         for key,value in obj['user'].items():
@@ -190,3 +204,8 @@ class DriverInfoSeriazer(serializers.ModelSerializer):
     class Meta:
         model = Driver
         fields = ['name','phone','car_name','car_number','car_color']
+
+class DriverServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DriverAvailableService
+        fields = '__all__'

@@ -17,14 +17,13 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY','asdfwefef2131a#sefej43;k2ijo2i34i90ri90feoire902390ii912f')
 
 # DEBUG = True
-DEBUG = int(os.environ.get('DEBUG',0))
+DEBUG = int(os.environ.get('DEBUG',1))
 
 # ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS','127.0.0.1 localhost').split(' ')
 ALLOWED_HOSTS = ['*']
-
 CORS_ORIGIN_ALLOW_ALL = True
 
 HOST ='http://127.0.0.1:8000' if DEBUG else 'https://api.perfecttaxi.uz'
@@ -39,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'ws.apps.WsConfig',
+    'chat',
     'category',
     'creditCard',
     'feedback',
@@ -55,10 +55,10 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -92,19 +92,19 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
-    'DATETIME_FORMAT': '%d-%m-%Y %H:%M'
+    'DATETIME_FORMAT': '%d-%m-%Y %H:%M:%S'
 }
 
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.environ.get('REDIS_HOST'), 6379)],
+            "hosts": [(os.environ.get('REDIS_HOST1',"127.0.0.1"), 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST")}:6379/0'
+CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST1","127.0.0.1")}:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
@@ -117,21 +117,21 @@ CORS_ALLOW_CREDENTIALS = True
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ.get('REDIS_HOST')}:6379/1",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOST1','127.0.0.1')}:6379/1",
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         "KEY_PREFIX": "PTaxi",
     }
 }
 
 DATABASES = {
-    'default': {
-        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
-        'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
-        'USER': os.environ.get("SQL_USER", "eric"),
-        'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
-        'HOST': os.environ.get("SQL_HOST", "localhost"),
-        'PORT': os.environ.get("SQL_PORT", "5432"),
-    }
+    # 'default': {
+    #     'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
+    #     'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
+    #     'USER': os.environ.get("SQL_USER", "eric"),
+    #     'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
+    #     'HOST': os.environ.get("SQL_HOST", "localhost"),
+    #     'PORT': os.environ.get("SQL_PORT", "5432"),
+    # }
     # 'default': {
     #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     #     'NAME': 'taxi',
@@ -140,14 +140,24 @@ DATABASES = {
     #     'HOST': 'localhost',
     #     'PORT': '',
     # }
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
-    #     'NAME': 'ptaxi',
-    #     'USER': 'eric',
-    #     'PASSWORD': 'nevergiveup3',
-    #     'HOST': 'localhost',
-    #     'PORT': '',
-    # }
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'ptaxi',
+        'USER': 'eric',
+        'PASSWORD': 'nevergiveup3',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+}
+
+
+PAYMENT_VARIANTS = {
+    'click' : ('click.ClickProvider', {
+        'merchant_id' : os.environ.get("CLICK_MERCHAT_ID","30270"),
+        'merchant_service_id' : os.environ.get("CLICK_SERVICE_ID","22771"),
+        'merchant_user_id' : os.environ.get("CLICK_USER_ID","36304"),
+        'secret_key' : os.environ.get("CLICK_SECRET_KEY","oBVfbPss7Fa")
+    })
 }
 
 

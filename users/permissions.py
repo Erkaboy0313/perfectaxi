@@ -68,6 +68,21 @@ class IsActive(permissions.BasePermission):
             return False
         return True
 
+class IsDriver(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user: User = request.user
+        if user:
+            if user.role == 'driver':
+                return True
+        return False
+
+class CanChangeStatus(permissions.BasePermission):
+    def has_permission(self, request, view):
+        user: User = request.user
+        if user:
+            if user.role == 'driver' or user.role == "admin":
+                return True
+        return False
 
 class CanHandleAdmin(CanHandleRequest):
     pass

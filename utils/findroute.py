@@ -117,5 +117,5 @@ calculator.add_trip(5, True, 0)
 calculator.add_trip(1, True, 10)
 
 # Calculate the overall rating
-result = calculator.calculate_rating()
-print(f"Overall Driver Rating: {result}")
+# result = calculator.calculate_rating()
+# print(f"Overall Driver Rating: {result}")

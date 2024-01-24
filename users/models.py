@@ -22,12 +22,15 @@ class User(AbstractUser,ModelWithTimestamps):
         ADMIN = 'admin'
 
     role = models.CharField(max_length=20, choices=UserRole.choices)
-    name = models.CharField(max_length=255)
+    first_name = models.CharField(max_length=255,blank=True,null=True)
+    last_name = models.CharField(max_length=255,blank=True,null=True)
     phone = models.CharField(max_length=40, null=True)
     confirmed_at = models.DateTimeField(null=True)
     blocked_at = models.DateTimeField(null=True)
     reason = models.TextField(null=True)
     is_block = models.BooleanField(default=False)
+    complete_profile = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
     last_login = None
     admin_name = None
 
@@ -35,6 +38,10 @@ class User(AbstractUser,ModelWithTimestamps):
 
     REQUIRED_FIELDS = ['phone']
 
+    @property
+    async def full_name(self):
+        return f"{self.last_name} {self.first_name}"
+    
     @property
     def confirm(self):
         self.confirmed_at = timezone.now()
@@ -64,7 +71,7 @@ class User(AbstractUser,ModelWithTimestamps):
         return super().delete(**kwargs)
     
     def __str__(self):
-        return f"{self.name} {self.phone}"
+        return f"{self.first_name} - {self.last_name} | {self.phone}"
 
 class Admin(User):
     """Админ"""
@@ -84,6 +91,7 @@ class Driver(models.Model):
     class DriverStatus(models.TextChoices):
         ACTIVE = 'active'
         BUSY = 'busy'
+        BLOCK = 'blocked'
 
     user = models.OneToOneField(User,on_delete=models.CASCADE)
     profile_image = models.FileField(null=True)
@@ -101,11 +109,25 @@ class Driver(models.Model):
     luggage = models.BooleanField(default=False)
     airconditioner = models.BooleanField(default=False)
     inmark = models.BooleanField(default=False)
+    mark = models.FloatField(default=5,blank=True)
+    generated_default_mark = models.BooleanField(default=False,blank=True)
     objects = DriverManager
 
     @property
     def name(self):
         return self.user.name
+
+    @property
+    async def aprofile_image(self):
+        try:
+            return self.profile_image.url
+        except:
+            return ''
+
+    @property
+    async def aname(self):
+        user = await User.objects.aget(id = self.user.id)
+        return await user.full_name
 
     @property
     def phone(self):
@@ -116,6 +138,14 @@ class Driver(models.Model):
 
     class Meta(User.Meta):
         verbose_name_plural = 'Drivers'
+
+class DriverAvailableService(models.Model):
+    driver = models.ForeignKey(Driver,on_delete=models.CASCADE,related_name="avilable_service")
+    service = models.ForeignKey('category.CarService',on_delete=models.CASCADE)
+    on = models.BooleanField(default=True)
+
+    def __str__(self) -> str:
+        return f"{self.driver} | {self.service}"
 
 class Client(models.Model):
     """Покупатель"""

@@ -3,11 +3,20 @@ from users.models import Client,Driver
 # Create your models here.
 
 class Feedback(models.Model):
-    client = models.ForeignKey(Client,on_delete=models.CASCADE)
+    
+    class FeedBackType(models.TextChoices):
+        CLIENT = 'client'
+        DRIVER = 'driver'
+    
+    client = models.ForeignKey(Client,on_delete=models.CASCADE,null=True)
     driver = models.ForeignKey(Driver,on_delete=models.CASCADE)
+    type = models.CharField(max_length = 20, choices = FeedBackType.choices, default = FeedBackType.CLIENT)
     mark = models.PositiveIntegerField()
     resons = models.ManyToManyField('Reson')
     time = models.DateField(null=True,blank=True,auto_now_add=True)
+
+    class Meta:
+        ordering = ['-time']
 
 class Reson(models.Model):
 

@@ -1,0 +1,252 @@
+from users.models import Client,Driver
+from order.models import Order,RejectReason,DriverOrderHistory
+from order.serializers import OrderSeriazer
+from django.db.models import Q
+from payment.models import Balance
+from django_celery_beat.models import PeriodicTask,IntervalSchedule
+
+from utils.cache_functions import setKey,getKey,removeKey
+from utils.cordinates import update_driver_location,remove_location
+from datetime import datetime
+from .tasks import sendDriverLocation,sendActiveDriverLocation,charge_driver,find_drivers_to_order
+
+from .async_serializer import orderSeriazer,lastOrderserializer,orderToDriverSerializer,driverInfoSerializer
+
+import asyncio,functools
+import json
+
+# Create new order (Client)
+async def createOrder(user, data):
+    # Get the client object associated with the user
+    client = await Client.objects.aget(user=user)  # Assuming Client.objects.get is async
+
+    # Validate and serialize the order data
+    serializer = OrderSeriazer(data=data)
+    await asyncio.to_thread(functools.partial(serializer.is_valid,raise_exception=True))
+    data = await asyncio.to_thread(functools.partial(serializer.save,client=client))
+    
+    order = await Order.objects.select_related('client','carservice').aget(id = data.id)
+    
+    serialized_data = await orderSeriazer(order)
+
+    # Return both the serialized order data and the service associated with the order
+    return (serialized_data, order.carservice.service)
+
+# Client's last orders
+async def lastOrderClient(user):
+    # Retrieve orders for the client, excluding specific statuses
+    last_orders = Order.objects.select_related('client','driver','driver__user','carservice').filter(  # Assuming filter is async
+        client__user=user
+    ).exclude(
+        Q(status="delivered") | Q(status="rejected") | Q(status="inactive")
+    )
+
+    # If orders exist, serialize them
+    if await last_orders.aexists():
+        serialized_data = await lastOrderserializer(last_orders)
+        return serialized_data
+    else:
+        return False  # Indicate no orders found
+
+# Driver's last orders
+async def lastOrderDriver(user):
+    # Retrieve the last order for the driver, excluding specific statuses
+    lastOrder = await Order.objects.select_related('client','driver','carservice').filter(  # Assuming filter is async
+        driver__user=user
+    ).exclude(
+        Q(status="delivered") | Q(status="rejected")
+    ).alast()
+
+    # If an order exists, serialize it
+    if lastOrder:
+        serialized_data = await orderToDriverSerializer(lastOrder)
+        return serialized_data
+    else:
+        return False  # Indicate no orders found
+
+async def setDriverLocation(user, location):
+    long, lat = list(map(float, location.split(',')))
+    data = await getKey(f"active_driver_{user.id}")  # Assuming getKey is async
+    if data:
+        sendActiveDriverLocation.delay(user.id, data, location)
+
+    driver = await Driver.objects.aget(user=user)  # Assuming get is async
+    if driver.status == Driver.DriverStatus.ACTIVE:
+        await update_driver_location(user.id, lat, long)  # Assuming async
+
+async def removeDriverLocation(user):
+    remove_location(user.id)  # Assuming async
+
+async def setDriverOnlineStatus(user, is_online):
+    pass  # Assuming already async or doesn't involve async operations
+
+async def setClientOnlineStatus(user, is_online):
+    data = {
+        "is_online": is_online,
+    }
+    await setKey(f'CS_{user.id}', data)  # Assuming setKey is async
+
+async def getOnlineDrivers(user, location):
+    sendDriverLocation.delay(user, location)
+
+    interval, created = await IntervalSchedule.objects.aget_or_create(  # Assuming async
+        every=10, period=IntervalSchedule.SECONDS
+    )
+    task, created = await PeriodicTask.objects.aget_or_create(  # Assuming async
+        name=f"sendtask{user}", interval=interval
+    )
+    task.task = 'sendDriverLocation'
+    task.args = json.dumps([user, location])
+    task.enabled = True
+    await task.asave()  # Assuming save is async
+
+async def sendOrderToDriverView(order, user, location, service):
+    interval, created = await IntervalSchedule.objects.aget_or_create(  # Assuming async
+        every=30, period=IntervalSchedule.SECONDS
+    )
+    interval2, created = await IntervalSchedule.objects.aget_or_create(  # Assuming async
+        every=15, period=IntervalSchedule.SECONDS
+    )
+
+    task = await PeriodicTask.objects.acreate(  # Assuming async
+        name=order, interval=interval
+    )
+    task2 = await PeriodicTask.objects.acreate(  # Assuming async
+        name=f"find_{order}", interval=interval2
+    )
+
+    find_drivers_to_order.delay(order, location, service)
+
+    task.task = 'sendOrderToDriver'
+    task.args = json.dumps([order, user])
+    await task.asave()  # Assuming save is async
+
+    task2.task = 'find_drivers_to_order'
+    task2.args = json.dumps([order, location, service])
+    await task2.asave()  # Assuming save is async
+
+async def cancelTask(name):
+    try:
+        task = await PeriodicTask.objects.aget(name=name)  # Assuming async
+        task.enabled = False
+        await task.asave()  # Assuming save is async
+    except PeriodicTask.DoesNotExist:
+        pass
+
+async def get_order(user, data):
+    driver = await Driver.objects.select_related('user').aget(user=user)  # Assuming async
+    _order = await Order.objects.select_related('client','driver','driver__user','client__user').filter(  # Assuming filter is async
+        id=data['order_id'], status=Order.OrderStatus.ACTIVE
+    ).afirst()
+    await DriverOrderHistory.objects.acreate(driver=driver, order = _order, status = _order.OrderStatus.DELIVERING)
+
+    if _order:
+        _order.driver = driver
+        _order.taken_time = datetime.now()
+        _order.status = Order.OrderStatus.DELIVERING
+        await _order.asave()  # Assuming save is async
+
+        order = await orderToDriverSerializer(_order)
+        driver = await driverInfoSerializer(driver)
+
+        await setKey(  # Assuming setKey is async
+            f"active_driver_{user.id}", f"client_{_order.client.user.id}"
+        )
+        sendActiveDriverLocation.delay(user.id, f"client_{_order.client.user.id}")
+        
+        await removeKey(f"prew_driver_{data['order_id']}")  # Assuming removeKey is async
+        await removeKey(f'new_order_driver_{user.id}')  # Assuming removeKey is async
+
+        return (order, driver, _order)
+    return False
+
+async def arrive_address(data):
+    order_id = data.get('order_id', None)
+    if order_id:
+        order = await Order.objects.select_related('client','client__user').aget(id=int(order_id))  # Assuming async
+        await order.asave(arrive=True)  # Assuming save is async
+        return order
+    else:
+        return False
+
+async def start_drive(data):
+    order_id = data.get('order_id', None)
+    if order_id:
+        order = await Order.objects.select_related('client','client__user').aget(id=int(order_id))  # Assuming async
+        order.status = 'delivering'
+        await order.asave(start=True)  # Assuming save is async        
+        return order
+    else:
+        return False
+
+async def finish_drive(data):
+    order_id = data.get('order_id', None)
+    total_distance = data.get('total_distance', None)
+    if order_id:
+        try:
+            order = await Order.objects.select_related('client','client__user','driver','driver__user','carservice').aget(id=int(order_id))  # Assuming async
+            order.status = 'delivered'
+            if total_distance:
+                order.price += total_distance * order.carservice.price_per_km
+            await order.asave(finish=True)  # Assuming save is async
+            charge_driver.delay(order.id, order.driver.id)
+            await removeKey(f"active_driver_{order.driver.user.id}")  # Assuming removeKey is async
+                    
+            driver_history = await DriverOrderHistory.objects.aget(order = order, driver= order.driver)
+            driver_history.status = order.OrderStatus.DELIVERED
+            await driver_history.asave()
+            
+            return order
+        except:
+            return False
+    else:
+        return False
+
+async def cancel_drive(data):
+    order_id = data.get('order_id', None)
+    reason = data.get('reason', None)
+    comment = data.get('comment', None)
+    if order_id and reason:
+        try:
+            order = await Order.objects.select_related('client','client__user','driver','driver__user').aget(id=int(order_id))  # Assuming async
+            reject_reason = await RejectReason.objects.aget(id=int(reason))  # Assuming async
+            order.status = 'rejected'
+            order.reject_reason = reject_reason
+            order.reject_comment = comment
+            await order.asave(reject=True)  # Assuming save is async
+            if order.driver:
+                
+                driver_history = await DriverOrderHistory.objects.aget(order = order, driver= order.driver)
+                driver_history.status = order.OrderStatus.DELIVERED
+                await driver_history.asave()
+                    
+                await removeKey(f'active_driver_{order.driver.user.id}')  # Assuming removeKey is async
+            return (True, order)
+        except Order.DoesNotExist:
+            return (False, "order not found")
+    else:
+        return (False, "data incomplete")
+
+async def check_balance(user):
+    driver = await Driver.objects.aget(user=user)  # Assuming async
+    balance = await Balance.objects.aget(driver=driver)  # Assuming async
+    if balance.fund < 5000:
+        driver.status = Driver.DriverStatus.BUSY
+        await driver.asave()  # Assuming save is async
+        return True
+    return False
+
+async def go_online(user):
+    if user.role == 'driver':
+        driver = await Driver.objects.aget(user=user)  # Assuming async
+        driver.status = Driver.DriverStatus.ACTIVE
+        await driver.asave()  # Assuming save is async
+    return True
+
+async def set_busy(user):
+    if user.role == 'driver':
+        driver = await Driver.objects.aget(user=user)  # Assuming async
+        driver.status = Driver.DriverStatus.BUSY
+        await driver.asave()  # Assuming save is async
+    return True
+

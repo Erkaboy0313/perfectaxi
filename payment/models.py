@@ -5,9 +5,41 @@ from random import randint
 
 # Create your models here.
 
+class Payment(models.Model):
+
+    class PaymentOperators(models.TextChoices):
+        CLICK = 'Click'
+        PAYME = 'PAYME'
+    
+    class PaymentStatus(models.TextChoices):
+        WAITING = "waiting"
+        PREAUTH = "preauth"
+        CONFIRMED = "confirmed"
+        REJECTED = "rejected"
+        REFUNDED = "refunded"
+        ERROR = "error"
+        INPUT = "input"
+
+    _id = models.CharField(max_length=255, null=True, blank=False)
+    transaction_id = models.CharField(max_length=255, null=True, blank=False)
+    balance_id = models.BigIntegerField(null=True, blank=True)
+    amount = models.FloatField(null=True, blank=True)
+    time = models.BigIntegerField(null=True, blank=True)
+    perform_time = models.BigIntegerField(null=True, default=0)
+    cancel_time = models.BigIntegerField(null=True, default=0)
+    status = models.CharField(null=True, choices=PaymentStatus.choices)
+    reason = models.CharField(max_length=255, null=True, blank=True)
+    created_at_ms = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    payment_operator = models.CharField(choices=PaymentOperators.choices,null=True,blank=True)
+    
+    def __str__(self):
+        return str(self._id)
+
 class Balance(models.Model):
-    driver = models.OneToOneField(Driver,on_delete=models.SET_NULL,null=True)
     id_number = models.IntegerField()
+    driver = models.OneToOneField(Driver,on_delete=models.SET_NULL,null=True)
     fund = models.FloatField(default=0,blank=True)
 
     def save(self,*args,**kwargs):
@@ -22,10 +54,7 @@ class Balance(models.Model):
         return super().save(*args,**kwargs)
 
     def __str__(self):
-        return f"{self.driver} {self.fund}"
-
-class Payment(models.Model):
-    pass
+        return f"{self.id_number} | {self.fund}"
 
 class Charge(models.Model):
 

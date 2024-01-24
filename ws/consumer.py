@@ -1,19 +1,17 @@
 from category.models import CarService
 import json
 from asgiref.sync import async_to_sync
-from channels.generic.websocket import WebsocketConsumer
+from channels.generic.websocket import WebsocketConsumer,AsyncWebsocketConsumer
 from utils.cordinates import FindRoute
 from utils.cache_functions import setKey
 from .serializers import CostSerializer
-from utils.findDrivers import findCloseDriver,OrderDriversByRoute
-from timeit import default_timer as time
 from .views import createOrder,lastOrderClient,lastOrderDriver,removeDriverLocation
 from .views import setDriverLocation,setClientOnlineStatus,\
         setDriverOnlineStatus,getOnlineDrivers,cancelTask,\
         sendOrderToDriverView,get_order,start_drive,finish_drive,cancel_drive,\
-        arrive_address
-
-
+        arrive_address,check_balance,go_online,set_busy
+from utils.cache_functions import getKey,setKey,removeKey
+from users.models import Driver
 
 class OrderConsumer(WebsocketConsumer):
 
@@ -21,31 +19,33 @@ class OrderConsumer(WebsocketConsumer):
         def wrapper(self,*args,**kwargs):
             user = self.scope["user"]
             if user.is_authenticated:
+                if user.role == "driver":
+                    res = check_balance(user)
+                    if res:
+                        self.accept()
+                        return self.send_error({"error_text":"Insufficient Fund"})
                 return func(self,*args,**kwargs)
             else:
                 self.accept()
-                self.send_error({"error_text":"Invalid Token"})
-        return wrapper
-    
-    def isAuthenticated(func):
-        def wrapper(self,*args,**kwargs):
-            user = self.scope["user"]
-            if user.is_authenticated:
-                return func(self,*args,**kwargs)
-            else:
-                self.send_error({"error_text":"Invalid Token"})
+                return self.send_error({"error_text":"Invalid Token"})
         return wrapper
 
     @isAuthenticatedC
     def connect(self):
         self.room_name = self.scope["url_route"]["kwargs"]["room_name"]
         self.room_group_name = "chat_%s" % self.room_name   
-
         self.accept()
         user = self.scope['user']
         if user.role == 'driver':
-            setDriverOnlineStatus(user,True)
             self.join_room(f'driver_{user.id}')
+            driver = Driver.objects.get(user = user)
+            self.order_status({
+                "action":"profile",
+                "message":driver.status
+            })
+            prev_not = getKey(f"new_order_driver_{user.id}")
+            if prev_not:
+                self.send_order_to_driver({"message":prev_not})
             res = lastOrderDriver(user)
             if res:
                 return self.send_order(res)
@@ -70,7 +70,6 @@ class OrderConsumer(WebsocketConsumer):
             self.room_group_name, self.channel_name
         )
 
-    @isAuthenticated
     def calculatePrice(self,data):
         """
             {
@@ -89,7 +88,6 @@ class OrderConsumer(WebsocketConsumer):
         
         return self.send_price(serializer.data)
     
-    @isAuthenticated
     def newOrder(self,data):
         """
             {
@@ -105,14 +103,13 @@ class OrderConsumer(WebsocketConsumer):
         cancelTask(f'sendtaskclient_{user.id}')
 
         # should send a location and function will find closest and available drivers.
-        order = createOrder(user,data)
+        order,service = createOrder(user,data)
 
         # should provide with more info about order
-        sendOrderToDriverView(f"order_{order['id']}",user.id,data['start_point'])
+        sendOrderToDriverView(f"order_{order['id']}",user.id,data['start_point'],service)
 
         return self.send_order(order)
 
-    @isAuthenticated
     def findDrivers(self,data):
         """
             {
@@ -125,7 +122,6 @@ class OrderConsumer(WebsocketConsumer):
         if location:
             getOnlineDrivers(f'client_{user.id}',location)
 
-    @isAuthenticated
     def getOrder(self,data):
         # Driver accepts order
         """
@@ -136,9 +132,9 @@ class OrderConsumer(WebsocketConsumer):
         """
 
         user = self.scope['user']
+        cancelTask(f"order_{data['order_id']}")
         res = get_order(user,data)
         if res:
-            cancelTask(f"order_{res[2].id}")
             async_to_sync(self.channel_layer.group_send)(
                 f"client_{res[2].client.user.id}",
                 {
@@ -150,7 +146,6 @@ class OrderConsumer(WebsocketConsumer):
         else:
             return self.send_error('order olindi')
 
-    @isAuthenticated
     def arriveDestination(self,data):
         """
             {
@@ -174,7 +169,6 @@ class OrderConsumer(WebsocketConsumer):
         else:
             return self.send_error("order not found")
 
-    @isAuthenticated
     def startDrive(self,data):
         """
             {
@@ -198,12 +192,12 @@ class OrderConsumer(WebsocketConsumer):
         else:
             return self.send_error("order not found")
 
-    @isAuthenticated
     def finishDrive(self,data):
         """
             {
                 "command":"finish_drive",
-                "order_id":id
+                "order_id":id,
+                "tottal_distance": 12.5 #Optinal. in km
             }
         """
         res = finish_drive(data)
@@ -223,16 +217,18 @@ class OrderConsumer(WebsocketConsumer):
         else:
             return self.send_error("order not found")
         
-    @isAuthenticated
+    # should Be updated. Remove Active driver key from redis if driver exists    
     def cancelDrive(self,data):
         """
             {
                 "command":"cancel_drive",
-                "order_id":id
+                "order_id":id,
+                "reason":id,
+                "comment":str,optional
             }
         """
-        res = cancel_drive(data)
-        if res:
+        status,res = cancel_drive(data)
+        if status:
             driver_group = f'driver_{res.driver.user.id}'
             response_data = {
                 "message":{
@@ -245,8 +241,44 @@ class OrderConsumer(WebsocketConsumer):
             self.order_status(response_data)
             return self.send_message_to_group(driver_group,response_data['message'],action)
         else:
-            return self.send_error("order not found")
-        
+            return self.send_error(res)
+
+    def goOnline(self,data):
+        user = self.scope['user']
+        res = check_balance(user)
+        if res:
+            return self.send_error({"error_text":"Insufficient Fund"})
+        go_online(user)
+        data = {
+            'action':"user_online",
+            "message":"you are online"
+        }
+        return self.order_status(data)
+
+    def setBusy(self,data):
+        user = self.scope['user']
+        set_busy(user)
+        removeDriverLocation(user)
+        data = {
+            'action':"user_busy",
+            "message":"you are offline"
+        }
+        return self.order_status(data)
+
+    def seen_order(self,data):
+        order_id = data['order_id']
+        order = getKey(f"prew_driver_{order_id}")
+        if order['driver_id'] == self.scope['user'].id:
+            order['seen'] = True
+            setKey(f"prew_driver_{order_id}",order)
+
+    def miss_order(self,data):
+        order_id = data['order_id']
+        user_id = self.scope['user'].id
+        removeKey(f"prew_driver_{order_id}")
+        removeKey(f"new_order_driver_{user_id}")
+        # Other logic here
+
     commands = {
         'find_drivers':findDrivers,
         'calculate_price':calculatePrice,
@@ -255,7 +287,11 @@ class OrderConsumer(WebsocketConsumer):
         'arrive_drive':arriveDestination,
         'start_drive':startDrive,
         'finish_drive':finishDrive,
-        'cancel_drive':cancelDrive
+        'cancel_drive':cancelDrive,
+        'go_online':goOnline,
+        'set_busy':setBusy,
+        'seen_order':seen_order,
+        'miss_order':miss_order,
     }
 
     # Receive message from WebSocket
@@ -320,7 +356,15 @@ class OrderConsumer(WebsocketConsumer):
                 'message':massage
             }
         )) 
-        
+
+    def notify_missed_order(self, massage):
+        self.send(text_data=json.dumps(
+            {   
+                "action":"miss_order",
+                'message': massage
+            }
+        ))
+
     # send order to user
     def send_order(self , massage):
         self.send(text_data=json.dumps(
@@ -351,8 +395,6 @@ class OrderConsumer(WebsocketConsumer):
     # send drivers location to user
     def send_drivers(self , event):
         massage = event['message']
-        for m in massage:
-            m[0] = int(m[0])
         self.send(text_data=json.dumps(
             {   
                 "action":"drivers",
@@ -397,7 +439,17 @@ class OrderConsumer(WebsocketConsumer):
 
 class LocationConsumer(WebsocketConsumer):
 
-    @OrderConsumer.isAuthenticatedC
+    def isAuthenticatedC(func):
+        def wrapper(self,*args,**kwargs):
+            user = self.scope["user"]
+            if user.is_authenticated:
+                return func(self,*args,**kwargs)
+            else:
+                self.accept()
+                return self.send_error({"error_text":"Invalid Token"})
+        return wrapper
+
+    @isAuthenticatedC
     def connect(self):
         self.room_name = "Locations"
         # Join room group
@@ -410,7 +462,6 @@ class LocationConsumer(WebsocketConsumer):
             self.room_name, self.channel_name
         )
 
-    @OrderConsumer.isAuthenticated
     def setLocation(self,data):
         """
             {
@@ -440,4 +491,3 @@ class LocationConsumer(WebsocketConsumer):
                     'message':massage
                 }
             )) 
-

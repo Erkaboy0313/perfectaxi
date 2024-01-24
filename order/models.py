@@ -1,6 +1,6 @@
 from django.db import models
 from users.models import Client,Driver
-from .managers import SeriviseManger
+from .managers import SeriviseManger,DriverHistoryManager
 from django.utils import timezone
 # Create your models here.
 
@@ -8,8 +8,14 @@ class Order(models.Model):
 
     class OrderStatus(models.TextChoices):
         ACTIVE = 'active'
+        INACTIVE = 'inactive'
+        
+        ASSIGNED = 'assigned'
+        ARRIVED = 'arrived'
+        
         DELIVERING = 'delivering'
         DELIVERED = 'delivered'
+        
         REJECTED = 'rejected'
 
     client = models.ForeignKey(Client,on_delete=models.CASCADE, null=True,blank=True)
@@ -28,13 +34,14 @@ class Order(models.Model):
     price = models.FloatField(null=True,blank=True)
     payment_type = models.CharField(max_length=4,null=True,blank=True)
     status = models.CharField(max_length=15,choices=OrderStatus.choices,default=OrderStatus.ACTIVE,blank=True)
-    reject_reason = models.TextField(null=True,blank=True)
+    reject_reason = models.ForeignKey('RejectReason',on_delete=models.SET_NULL,null=True)
+    reject_comment = models.TextField(null=True,blank=True)
     services = models.ManyToManyField('Services',blank=True)
 
     def __str__(self):
         return f"{self.client} - {self.driver} - {self.ordered_time} - {self.status}"
     
-    @property
+    @property 
     def category(self):
         return self.carservice.service
     
@@ -46,7 +53,7 @@ class Order(models.Model):
     def client_name(self):
         return self.client.user.name
 
-    def save(self, *args, **kwargs):
+    async def asave(self, *args, **kwargs):
         time = timezone.now()
         if 'finish' in kwargs:
             del kwargs['finish']
@@ -67,13 +74,32 @@ class Order(models.Model):
         if not self.contact_number and not self.payment_type:
             self.contact_number = self.client.user.phone
             self.payment_type = self.client.payment_type
-        return super().save(*args, **kwargs)
+        return await super().asave(*args, **kwargs)
 
     class Meta:
         ordering = ['-id']
 
+class DriverOrderHistory(models.Model):
+    
+    class OrderStatus(models.TextChoices):
+        
+        DELIVERING = 'delivering'
+        DELIVERED = 'delivered'
+        REJECTED = 'rejected'
+    
+    driver = models.ForeignKey(Driver,on_delete = models.CASCADE)
+    order = models.ForeignKey(Order,on_delete = models.CASCADE)
+    time = models.DateTimeField(auto_now_add = True)
+    status = models.CharField(max_length = 20,choices = OrderStatus.choices)
+
+    objects = models.Manager()
+    report = DriverHistoryManager()
+
+
 class Point(models.Model):
     order = models.ForeignKey(Order,on_delete=models.CASCADE)
+    point_number = models.IntegerField(null = True)
+    point_address = models.CharField(max_length = 255, null=True, blank=True)
     point = models.CharField(max_length=40, null=True)
 
     def __str__(self):
@@ -81,6 +107,12 @@ class Point(models.Model):
 
     class Meta:
         ordering = ['id']
+
+class RejectReason(models.Model):
+    name = models.CharField(max_length = 40)
+    
+    def __str__(self):
+        return self.name
 
 class Services(models.Model):
     name = models.CharField(max_length=100,null=True)

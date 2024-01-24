@@ -14,6 +14,8 @@ class CostSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     service = serializers.CharField()
     cost = serializers.FloatField()
+    travel_time = serializers.IntegerField()
+    distance = serializers.FloatField()
 
     def to_representation(self, instance):
         obj = super().to_representation(instance)
@@ -34,7 +36,7 @@ class DriverInfoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Driver 
-        fields = ['id','name',"profile_image","car_model","car_name","car_number","car_color",]
+        fields = ['id','name',"profile_image","car_model","car_name","car_number","car_color"]
 
 class LastOrderSerializer(OrderSeriazer):
     driver = DriverInfoSerializer()
