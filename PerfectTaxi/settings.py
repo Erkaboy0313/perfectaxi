@@ -27,7 +27,7 @@ ALLOWED_HOSTS = ['*']
 CORS_ORIGIN_ALLOW_ALL = True
 
 HOST ='http://127.0.0.1:8000' if DEBUG else 'https://api.perfecttaxi.uz'
-
+    
 INSTALLED_APPS = [
     'daphne',
     'django.contrib.admin',
@@ -124,14 +124,14 @@ CACHES = {
 }
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
-    #     'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
-    #     'USER': os.environ.get("SQL_USER", "eric"),
-    #     'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
-    #     'HOST': os.environ.get("SQL_HOST", "localhost"),
-    #     'PORT': os.environ.get("SQL_PORT", "5432"),
-    # }
+    'default': {
+        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
+        'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
+        'USER': os.environ.get("SQL_USER", "eric"),
+        'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
+        'HOST': os.environ.get("SQL_HOST", "localhost"),
+        'PORT': os.environ.get("SQL_PORT", "5432"),
+    }
     # 'default': {
     #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     #     'NAME': 'taxi',
@@ -140,14 +140,14 @@ DATABASES = {
     #     'HOST': 'localhost',
     #     'PORT': '',
     # }
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'ptaxi',
-        'USER': 'eric',
-        'PASSWORD': 'nevergiveup3',
-        'HOST': 'localhost',
-        'PORT': '',
-    }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': 'ptaxi',
+    #     'USER': 'eric',
+    #     'PASSWORD': 'nevergiveup3',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    # }
 }
 
 
@@ -179,7 +179,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Tashkent'
 
 USE_I18N = True
 

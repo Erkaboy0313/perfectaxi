@@ -23,14 +23,21 @@ class OrderConsumer(AsyncWebsocketConsumer):
             user = self.scope["user"]
             if user.is_authenticated:
                 if user.role == "driver":
+
+                    if not user.is_verified:
+                        await self.accept()
+                        return await self.send_error({"error_text":"User is not verified"})
+                    
                     res = await check_balance(user)
                     if res:
                         await self.accept()
                         return await self.send_error({"error_text":"Insufficient Fund"})
+                    
                 return await func(self,*args,**kwargs)
             else:
                 await self.accept()
-                return await self.send_error({"error_text":"Invalid Token"})
+                await self.send_error({"error_text":"Invalid Token"})
+                return self.close()
         return wrapper
     
     @isAuthenticatedC
@@ -101,7 +108,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
         location = data.get('location', '')
         user = self.scope['user']
         if location:
-            await getOnlineDrivers(f'client_{user.id}', location)  # Assuming getOnlineDrivers is async
+            await getOnlineDrivers(f'client_{user.id}', location) 
 
     async def getOrder(self, data):
         user = self.scope['user']
@@ -176,7 +183,6 @@ class OrderConsumer(AsyncWebsocketConsumer):
     async def cancelDrive(self, data):
         status, res = await cancel_drive(data)  # Assuming cancel_drive is async
         if status:
-            driver_group = f'driver_{res.driver.user.id}'
             response_data = {
                 "message": {
                     "order_id": res.id,
@@ -185,8 +191,12 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 "action": "cancel_drive"
             }
             action = "cancel_drive"
-            await self.order_status(response_data)  # Assuming order_status is async
-            return await self.send_message_to_group(driver_group, response_data['message'], action)  # Assuming send_message_to_group is async
+            
+            if res.driver:
+                driver_group = f'driver_{res.driver.user.id}'
+                await self.send_message_to_group(driver_group, response_data['message'], action)  # Assuming send_message_to_group is async
+
+            return await self.order_status(response_data)  # Assuming order_status is async
         else:
             return await self.send_error(res)
     
@@ -220,14 +230,17 @@ class OrderConsumer(AsyncWebsocketConsumer):
             await setKey(f"prew_driver_{order_id}", order)  # Assuming setKey is async
 
     async def miss_order(self, data):
-        order_id = data['order_id']
-        user_id = self.scope['user'].id
-        await removeKey(f"prew_driver_{order_id}")  # Assuming removeKey is async
-        await removeKey(f"new_order_driver_{user_id}")  # Assuming removeKey is async
-        order = await Order.objects.aget(id = order_id)
-        driver = await Driver.objects.aget(user__id = user_id)
-        await DriverOrderHistory.objects.acreate(driver=driver, order = order, status = order.OrderStatus.REJECTED)
-        # Other logic here
+        try:
+            order_id = data['order_id']
+            user_id = self.scope['user'].id
+            order = await Order.objects.aget(id = order_id)
+            driver = await Driver.objects.aget(user__id = user_id)
+            await removeKey(f"prew_driver_{order_id}")  # Assuming removeKey is async
+            await removeKey(f"new_order_driver_{user_id}")  # Assuming removeKey is async
+            await DriverOrderHistory.objects.acreate(driver=driver, order = order, status = order.OrderStatus.REJECTED)
+            # Other logic here
+        except:
+            return await self.send_error('order not found')
 
     async def setLocation(self, data):
         """
@@ -433,5 +446,3 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 room_name,
                 self.channel_name
             )
-
-

@@ -95,7 +95,6 @@ class DriverOrderHistory(models.Model):
     objects = models.Manager()
     report = DriverHistoryManager()
 
-
 class Point(models.Model):
     order = models.ForeignKey(Order,on_delete=models.CASCADE)
     point_number = models.IntegerField(null = True)

@@ -203,6 +203,9 @@ def find_nearest_drivers(longitude, latitude, radius, count):
 def remove_location(id):
     redis_client.zrem("driver_locations",id)
 
+async def aremove_location(id):
+    redis_client.zrem("driver_locations",id)
+
 async def retrieve_location(id):
     return redis_client.geopos('driver_locations',id)[0]
 

@@ -19,13 +19,14 @@ class AdminManager(BaseManager):
     def get_queryset(self):
         return super().get_queryset().filter(role=self.model.UserRole.ADMIN)
 
-    def create_superuser(self,phone, name='admin', password=None, *args, **kwargs):
+    def create_superuser(self,phone, first_name='admin',last_name='admin', password=None, *args, **kwargs):
         if not password:
             password = env_conf.get('DJANGO_SUPERUSER_PASSWORD')
         return get_user_model().objects.create(
             role=self.model.UserRole.ADMIN,
             phone=phone,
-            name=name,
+            first_name=first_name,
+            last_name=last_name,
             password=make_password(password),
             is_staff=True,
             is_superuser=True,
@@ -43,22 +44,24 @@ class AdminManager(BaseManager):
 
 class UserManager(BaseManager):
 
-    def create_user(self, role, phone, name, *args, **kwargs):
+    def create_user(self, role, phone, first_name='admin',last_name='admin', *args, **kwargs):
         return get_user_model().objects.create(
             phone=phone,
-            name=name,
+            first_name=first_name,
+            last_name=last_name,
             role=role,
             *args,
             **kwargs
         )
     
-    def create_superuser(self,phone, name='admin', password=None, *args, **kwargs):
+    def create_superuser(self,phone, first_name='admin',last_name='admin', password=None, *args, **kwargs):
         if not password:
             password = env_conf.get('DJANGO_SUPERUSER_PASSWORD')
         return get_user_model().objects.create(
             role=self.model.UserRole.ADMIN,
             phone=phone,
-            name=name,
+            first_name=first_name,
+            last_name=last_name,
             password=make_password(password),
             is_staff=True,
             is_superuser=True,

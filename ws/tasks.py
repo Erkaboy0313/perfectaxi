@@ -5,7 +5,7 @@ from asgiref.sync import async_to_sync
 from utils.cache_functions import sgetKey,ssetKey,sremoveKey
 from channels.layers import get_channel_layer 
 from django_celery_beat.models import PeriodicTask
-from order.models import Order,DriverOrderHistory
+from order.models import Order
 from users.models import Driver
 from pricing.models import PricingDriver
 from payment.models import Balance,Charge
@@ -33,6 +33,7 @@ def sendActiveDriverLocation(driver,user,location = None):
             "c_loc":location,
             "p_loc":sgetKey(f"prev_loc_{int(driver)}")
         }
+        ssetKey(f"prev_loc_{int(driver)}",location)
         return async_to_sync(channel_layer.group_send)(
             user,
             {
@@ -87,7 +88,9 @@ def find_drivers_to_order(order,location,service):
         radiuses = [radius.radius1,radius.radius2,radius.radius3,radius.radius4]
         if not drivers:
             while not drivers and radiuses:
+                print(radiuses[0])
                 drivers = findAvailableDrivers(location=location,radius=radiuses.pop(0),order_id=order_id,service=service)
+                print(f"-----------------------{drivers} -----------------------------")
             ssetKey(order,drivers)
             
     else:
@@ -101,9 +104,10 @@ def sendOrderTodriverTask(order,client):
     order_id = order.split('_')[1]
     notify_prev_driver.delay(order_id)
     
+    task = PeriodicTask.objects.get(name = order)
+
     if Order.objects.filter(id = order_id,status = 'active').exists():
         channel_layer = get_channel_layer()
-        task = PeriodicTask.objects.get(name = order)
         task_count,created = TaskCount.objects.get_or_create(name = order)
         task_count.inc
 
@@ -145,6 +149,7 @@ def sendOrderTodriverTask(order,client):
                     'type':'send_failur_message_to_client'
                 }
             )
+    
     else:
         task.enabled = False
         task.save()        
