@@ -27,12 +27,12 @@ class Payment(models.Model):
     time = models.BigIntegerField(null=True, blank=True)
     perform_time = models.BigIntegerField(null=True, default=0)
     cancel_time = models.BigIntegerField(null=True, default=0)
-    status = models.CharField(null=True, choices=PaymentStatus.choices)
+    status = models.CharField(max_length=30,null=True, choices=PaymentStatus.choices)
     reason = models.CharField(max_length=255, null=True, blank=True)
     created_at_ms = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    payment_operator = models.CharField(choices=PaymentOperators.choices,null=True,blank=True)
+    payment_operator = models.CharField(max_length=30,choices=PaymentOperators.choices,null=True,blank=True)
     
     def __str__(self):
         return str(self._id)

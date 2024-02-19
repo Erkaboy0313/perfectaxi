@@ -9,14 +9,14 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
+        ('category', '0001_initial'),
         ('users', '0001_initial'),
-        ('payment', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='balance',
-            name='driver',
-            field=models.OneToOneField(null=True, on_delete=django.db.models.deletion.SET_NULL, to='users.driver'),
+            model_name='savedlocation',
+            name='user',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='users.client'),
         ),
     ]
