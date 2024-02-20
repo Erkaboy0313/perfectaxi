@@ -3,16 +3,18 @@ from utils.cache_functions import sgetKey
 from users.models import Driver
 import asyncio
 
-def serializeCloseDriver(drivers_list):
+def serializeCloseDriver(drivers_list,service):
     drivers = []
     for driver in drivers_list:
-        driver_obj = {
-            'id':int(driver[0]),
-            'c_loc':f"{driver[2][1]},{driver[2][0]}",
-            'p_loc':sgetKey(f"prev_loc_{int(driver[0])}")
-            # driver Category
-        }
-        drivers.append(driver_obj)
+        d = Driver.objects.get(user__id = int(driver[0]))
+        if d.avilable_service.filter(service__service = service,on = True).exists():
+            driver_obj = {
+                'id':int(driver[0]),
+                'c_loc':f"{driver[2][1]},{driver[2][0]}",
+                'p_loc':sgetKey(f"prev_loc_{int(driver[0])}"),
+                'service':service
+            }
+            drivers.append(driver_obj)
     return drivers
 
 def serializeAvailableDriver(drivers_list):
@@ -29,10 +31,10 @@ def serializeAvailableDriver(drivers_list):
         drivers.append(driver_obj)
     return drivers
 
-def findCloseDriver(location = None,radius:int = 1000):
+def findCloseDriver(location = None,radius:int = 1000,service:str = 'standart'):
     long,lat = tuple(map(float,location.split(',')))
     drivers = find_nearest_drivers(lat,long,radius,10)
-    return serializeCloseDriver(drivers)
+    return serializeCloseDriver(drivers,service)
 
 def findAvailableDrivers(location,radius,order_id,service):
     black_list = sgetKey(f"black_list_{order_id}")

@@ -13,9 +13,9 @@ from utils.cordinates import remove_location
 from .models import TaskCount,SearchRadius
 
 @shared_task(name = 'sendDriverLocation')
-def sendDriverLocation(user,location):
+def sendDriverLocation(user,location,service):
     channel_layer = get_channel_layer()
-    drivers = findCloseDriver(location=location)
+    drivers = findCloseDriver(location=location,service=service)
     return async_to_sync(channel_layer.group_send)(
         user,
         {

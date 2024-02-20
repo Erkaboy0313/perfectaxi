@@ -68,7 +68,7 @@ class AuthViewSet(viewsets.GenericViewSet):
 
 @method_decorator(transaction.non_atomic_requests, name='dispatch')
 class DriverViewSet(viewsets.ModelViewSet):
-    queryset = Driver.objects.select_related('user').prefetch_related('car_images').prefetch_related('car_tex_passport_images').prefetch_related('license_images')
+    queryset = Driver.objects.select_related('user').prefetch_related('car_images','car_tex_passport_images','license_images')
     serializer_class = serializers.DriverSerializer
     http_method_names = ['put','patch','delate','get']
     permission_classes = (IsActive,)

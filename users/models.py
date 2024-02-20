@@ -99,7 +99,7 @@ class Driver(models.Model):
     car_tex_passport_images = models.ManyToManyField('DocumentImages',related_name='car_text_images')
     license_images = models.ManyToManyField('DocumentImages',related_name='license_images')
     car_model = models.CharField(max_length=200,null=True)
-    status = models.CharField(max_length=20,choices=DriverStatus.choices,default=DriverStatus.ACTIVE)
+    status = models.CharField(max_length=20,choices=DriverStatus.choices,default=DriverStatus.BUSY)
     car_name = models.CharField(max_length=100,null=True)
     car_number = models.CharField(max_length=200,null=True)
     car_color = models.CharField(max_length=100,null=True)

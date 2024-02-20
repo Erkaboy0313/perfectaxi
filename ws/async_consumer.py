@@ -107,8 +107,9 @@ class OrderConsumer(AsyncWebsocketConsumer):
     async def findDrivers(self, data):
         location = data.get('location', '')
         user = self.scope['user']
+        service = data.get('service',None)
         if location:
-            await getOnlineDrivers(f'client_{user.id}', location) 
+            await getOnlineDrivers(f'client_{user.id}', location, service) 
 
     async def getOrder(self, data):
         user = self.scope['user']

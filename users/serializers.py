@@ -8,7 +8,7 @@ from feedback.tasks import populate_mark
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['first_name','last_name','phone']
+        fields = ['first_name','last_name','phone','is_block','complete_profile','is_verified']
 
 class RegistrationSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=['client', 'driver'])
@@ -131,6 +131,7 @@ class DriverSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only = True)
     last_name = serializers.CharField(write_only = True)
     user = UserSerializer()
+    
     class Meta:
         model = Driver
         fields = '__all__'
@@ -173,12 +174,15 @@ class DriverSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         request = self._kwargs['context']['request']
         obj = super().to_representation(instance)
+        
         if request.user.is_admin():
             obj['car_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_images.all()]
             obj['car_tex_passport_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_tex_passport_images.all()]
             obj['license_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.license_images.all()]
+
         for key,value in obj['user'].items():
             obj[key] = value
+        
         del obj['user']
         return obj
 

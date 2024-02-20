@@ -84,8 +84,8 @@ async def setClientOnlineStatus(user, is_online):
     }
     await setKey(f'CS_{user.id}', data)  # Assuming setKey is async
 
-async def getOnlineDrivers(user, location):
-    sendDriverLocation.delay(user, location)
+async def getOnlineDrivers(user, location, service):
+    sendDriverLocation.delay(user, location, service)
 
     interval, created = await IntervalSchedule.objects.aget_or_create(  
         every=10, period=IntervalSchedule.SECONDS
@@ -94,7 +94,7 @@ async def getOnlineDrivers(user, location):
         name=f"sendtask{user}", interval=interval
     )
     task.task = 'sendDriverLocation'
-    task.args = json.dumps([user, location])
+    task.args = json.dumps([user, location, service])
     task.enabled = True
     await task.asave()  # Assuming save is async
 
