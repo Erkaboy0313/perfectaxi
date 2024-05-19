@@ -9,18 +9,28 @@ class PointSerializer(serializers.ModelSerializer):
         fields = ['point','point_number','point_address']
 
 class OrderSeriazer(serializers.ModelSerializer):
-    points = serializers.ListField(child = PointSerializer(), write_only = True, required = False)
+    points = serializers.ListField(write_only = True, required = False)
+    latitude = serializers.FloatField(write_only = True)
+    longitude = serializers.FloatField(write_only = True)
     point_set = PointSerializer(read_only = True,many=True)
     class Meta:
         model = Order
         exclude = ['ordered_time','taken_time','arived_time','started_time','complated_time','rejected_time']
     
     def save(self, **kwargs):
+
         if 'points' in self.validated_data:
             points = self.validated_data.pop('points')
+            lat,long = self.validated_data.pop('latitude'),self.validated_data.pop('longitude')
+            self.validated_data['start_point'] = f"{lat},{long}"
             order = super().save(**kwargs)
+            point_objects = []
+            print(points)
             for point in points:
-                Point.objects.create(order = order,**point)
+                point['point'] = f"{point.pop('latitude')},{point.pop('longitude')}"
+                point_objects.append(Point(order = order,**point))
+
+            Point.objects.bulk_create(point_objects)
         else:
             order = super().save(**kwargs)
         return order
@@ -29,7 +39,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Services
-        fields = ['id','name']
+        fields = "__all__"
 
 class ClientOrderHistory(serializers.ModelSerializer):
     driver = DriverInfoSeriazer()

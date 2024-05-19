@@ -2,7 +2,6 @@ from order.models import Point
 
 async def costSerializer(data):
     async def roundPrice(price):
-        print(price)
         rounded_hundreds = int(price / 100) % 10  # Extract the hundreds part and round it
         if rounded_hundreds >= 7:
             rounded_price = int(price / 1000) * 1000 + 1000
@@ -11,6 +10,7 @@ async def costSerializer(data):
         else:
             rounded_price = int(price / 1000) * 1000
         return rounded_price
+    
     cost_list = []
     for cost in data:
         obj = {
@@ -21,13 +21,15 @@ async def costSerializer(data):
             'distance':cost['distance'],
         }
         cost_list.append(obj)
+
     return cost_list
 
 async def point(x):
     return {
-        "number":x.point_number,
+        "point_number":x.point_number,
         "address":x.point_address,
-        "point":x.point
+        "latitude":float(x.point.split(',')[0]),
+        "longitude":float(x.point.split(',')[1])
     }
 
 async def orderSeriazer(data):
@@ -38,12 +40,13 @@ async def orderSeriazer(data):
         "carservice":data.carservice.service,
         "contact_number":data.contact_number,
         "start_adress":data.start_adress,
-        "start_point":data.start_point,
+        "latitude":float(data.start_point.split(',')[0]),
+        "longitude":float(data.start_point.split(',')[1]),
         "points":[await point(x) async for x in Point.objects.filter(order = data)],
         "distance":data.distance,
         "price":data.price,
         "payment_type":data.payment_type,
-        # "services":data.services
+        "services":[x.name for x in data.services.all()]
     }
     return obj
 
@@ -70,12 +73,13 @@ async def lastOrderserializer(data):
             "carservice":order.carservice.service,
             "contact_number":order.contact_number,
             "start_adress":order.start_adress,
-            "start_point":order.start_point,
+            "latitude":float(order.start_point.split(',')[0]),
+            "longitude":float(order.start_point.split(',')[1]),
             "points":[await point(x) async for x in Point.objects.filter(order = order)],
             "distance":order.distance,
             "price":order.price,
             "payment_type":order.payment_type,
-            # "services":data.services
+            "services":[x.name for x in order.services.all()]
         }
         orders.append(obj)
     return orders
@@ -85,11 +89,12 @@ async def orderToDriverSerializer(data):
         "id":data.id,
         "contact_number":data.contact_number,
         "start_adress":data.start_adress,
-        "start_point":data.start_point,
+        "latitude":float(data.start_point.split(',')[0]),
+        "longitude":float(data.start_point.split(',')[1]),
         "price":data.price,
         "payment_type":data.payment_type,
         "status":data.status,
-        # "services":data.services,
+        "services":[x.name for x in data.services.all()],
         "points":[await point(x) async for x in Point.objects.filter(order = data)]
     }
     return obj

@@ -74,42 +74,51 @@ class OrderConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         user = self.scope['user']
-        await cancelTask(f'sendtaskclient_{user.id}')  # Assuming cancelTask is async
+        await cancelTask(f'sendtaskclient_{user.id}')  
         if user.role == 'driver':
-            await setDriverOnlineStatus(user, False)  # Assuming setDriverOnlineStatus is async
+            await removeDriverLocation(user)
+            await setDriverOnlineStatus(user, False)  
         elif user.role == 'client':
-            await setClientOnlineStatus(user, False)  # Assuming setClientOnlineStatus is async
+            await setClientOnlineStatus(user, False)  
 
         # Leave room group
         await self.channel_layer.group_discard(
             self.room_group_name, self.channel_name
         )
     
+    # need to be fixed
     async def calculatePrice(self, data):
-        start = data.get('start_point')
-        points = data.get('points', [])
+        lat = data.get('latitude')
+        long = data.get('longitude')
+        start = f"{lat},{long}"
+        sorted_points = sorted(data.get('points', []),key=lambda x: x['point_number'])
+        points = [f"{x['latitude']},{x['longitude']}" for x in sorted_points]
         service = data.get('service', [])
-        
         distance,time = await FindRoute().find_drive(start, points)  # Assuming find_drive is async
         costs = await CarService.filter.calculatePrice(distance=distance,time=time,service_list=service)  # Assuming calculatePrice is async
         serialized_data = await costSerializer(costs)
         return await self.send_price(serialized_data)  # Assuming send_price is async
 
+    # need to be fixed for bitch
     async def newOrder(self, data):
         user = self.scope['user']
         await cancelTask(f'sendtaskclient_{user.id}')  # Assuming cancelTask is async
 
+        strat_point = f"{data['latitude']},{data['longitude']}"
         order, service = await createOrder(user, data)  # Assuming createOrder is async
-        await sendOrderToDriverView(f"order_{order['id']}", user.id, data['start_point'], service)  # Assuming sendOrderToDriverView is async
 
+        await sendOrderToDriverView(f"order_{order['id']}", user.id, strat_point, service)  # Assuming sendOrderToDriverView is async
+        
         return await self.send_order(order)  # Assuming send_order is async
 
+    # need to be fixed
     async def findDrivers(self, data):
-        location = data.get('location', '')
+        location = f"{data.get('latitude')},{data.get('longitude')}"
         user = self.scope['user']
         service = data.get('service',None)
         if location:
             await getOnlineDrivers(f'client_{user.id}', location, service) 
+
 
     async def getOrder(self, data):
         user = self.scope['user']
@@ -225,10 +234,11 @@ class OrderConsumer(AsyncWebsocketConsumer):
 
     async def seen_order(self, data):
         order_id = data['order_id']
-        order = await getKey(f"prew_driver_{order_id}")  # Assuming getKey is async
-        if order['driver_id'] == self.scope['user'].id:
-            order['seen'] = True
-            await setKey(f"prew_driver_{order_id}", order)  # Assuming setKey is async
+        order = await getKey(f"prew_driver_{order_id}")
+        if order:  
+            if order['driver_id'] == self.scope['user'].id:
+                order['seen'] = True
+                await setKey(f"prew_driver_{order_id}", order)  
 
     async def miss_order(self, data):
         try:
@@ -251,7 +261,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
             }
         """
         user = self.scope['user']
-        location = data.get('location', '')
+        location = f"{data.get('latitude')},{data.get('longitude')}"
         if location:
             await setDriverLocation(user, location)  # Assuming setDriverLocation is async
 

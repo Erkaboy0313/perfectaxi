@@ -22,7 +22,7 @@ async def createOrder(user, data):
     await asyncio.to_thread(functools.partial(serializer.is_valid,raise_exception=True))
     data = await asyncio.to_thread(functools.partial(serializer.save,client=client))
     
-    order = await Order.objects.select_related('client','carservice').aget(id = data.id)
+    order = await Order.objects.select_related('client','carservice').prefetch_related('services').aget(id = data.id)
     
     serialized_data = await orderSeriazer(order)
 
@@ -32,7 +32,7 @@ async def createOrder(user, data):
 # Client's last orders
 async def lastOrderClient(user):
     # Retrieve orders for the client, excluding specific statuses
-    last_orders = Order.objects.select_related('client','driver','driver__user','carservice').filter(  # Assuming filter is async
+    last_orders = Order.objects.select_related('client','driver','driver__user','carservice').prefetch_related("services").filter(  # Assuming filter is async
         client__user=user
     ).exclude(
         Q(status="delivered") | Q(status="rejected") | Q(status="inactive")
@@ -48,7 +48,7 @@ async def lastOrderClient(user):
 # Driver's last orders
 async def lastOrderDriver(user):
     # Retrieve the last order for the driver, excluding specific statuses
-    lastOrder = await Order.objects.select_related('client','driver','carservice').filter(  # Assuming filter is async
+    lastOrder = await Order.objects.select_related('client','driver','carservice').prefetch_related('services').filter(  # Assuming filter is async
         driver__user=user
     ).exclude(
         Q(status="delivered") | Q(status="rejected")
@@ -133,7 +133,7 @@ async def cancelTask(name):
 
 async def get_order(user, data):
     driver = await Driver.objects.select_related('user').aget(user=user)  
-    _order = await Order.objects.select_related('client','driver','driver__user','client__user').filter(  # Assuming filter is async
+    _order = await Order.objects.select_related('client','driver','driver__user','client__user').prefetch_related("services").filter(  # Assuming filter is async
         id=data['order_id'], status=Order.OrderStatus.ACTIVE
     ).afirst()
     await DriverOrderHistory.objects.acreate(driver=driver, order = _order, status = _order.OrderStatus.DELIVERING)

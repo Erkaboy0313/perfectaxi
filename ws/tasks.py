@@ -29,11 +29,17 @@ def sendActiveDriverLocation(driver,user,location = None):
     if location:
         channel_layer = get_channel_layer()
         data = {
-            "driver":Driver.objects.get(user__id = driver).id, #id
-            "c_loc":location,
-            "p_loc":sgetKey(f"prev_loc_{int(driver)}")
+            "driver":Driver.objects.get(user__id = driver).id,
+
+            "c_loc":{"latitude":float(location.split(",")[0]),
+                     "longitude":float(location.split(",")[1])},
+
+            "p_loc":{"latitude":float(sgetKey(f"prev_loc_{int(driver)}").split(",")[0]),
+                     "longitude":float(sgetKey(f"prev_loc_{int(driver)}").split(",")[1])}
         }
+
         ssetKey(f"prev_loc_{int(driver)}",location)
+
         return async_to_sync(channel_layer.group_send)(
             user,
             {

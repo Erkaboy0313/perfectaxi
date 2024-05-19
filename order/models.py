@@ -76,6 +76,29 @@ class Order(models.Model):
             self.payment_type = self.client.payment_type
         return await super().asave(*args, **kwargs)
 
+    def save(self, *args, **kwargs):
+        time = timezone.now()
+        if 'finish' in kwargs:
+            del kwargs['finish']
+            self.complated_time = time
+            wait_time = (self.started_time - self.arived_time).total_seconds() / 60
+            if int(wait_time) > 3:
+                self.price += int(wait_time - 3) * 500
+        if "arrive" in kwargs:
+            del kwargs['arrive']
+            self.arived_time = time
+        if "start" in kwargs:
+            del kwargs['start']
+            self.started_time = time
+        if "reject" in kwargs:
+            del kwargs['reject']
+            self.rejected_time = time
+        
+        if not self.contact_number and not self.payment_type:
+            self.contact_number = self.client.user.phone
+            self.payment_type = self.client.payment_type
+        return super().save(*args, **kwargs)
+
     class Meta:
         ordering = ['-id']
 

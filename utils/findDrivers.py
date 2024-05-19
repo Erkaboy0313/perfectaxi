@@ -7,12 +7,25 @@ def serializeCloseDriver(drivers_list,service):
     drivers = []
     for driver in drivers_list:
         d = Driver.objects.get(user__id = int(driver[0]))
-        if d.avilable_service.filter(service__service = service,on = True).exists():
+        services = d.avilable_service.filter(on = True)
+        if service and services.filter(service__service = service).exists():
             driver_obj = {
                 'id':int(driver[0]),
-                'c_loc':f"{driver[2][1]},{driver[2][0]}",
-                'p_loc':sgetKey(f"prev_loc_{int(driver[0])}"),
+                'c_loc':{"latitude":driver[2][1],
+                        "longitude":driver[2][0]},
+                'p_loc':{"latitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[0]),
+                        "longitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[1])},
                 'service':service
+            }
+            drivers.append(driver_obj)
+        elif not service:
+            driver_obj = {
+                'id':int(driver[0]),
+                'c_loc':{"latitude":driver[2][1],
+                        "longitude":driver[2][0]},
+                'p_loc':{"latitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[0]),
+                        "longitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[1])},
+                'service':services.first().service.service
             }
             drivers.append(driver_obj)
     return drivers
@@ -22,8 +35,10 @@ def serializeAvailableDriver(drivers_list):
     for driver in drivers_list:
         driver_obj = {
             'id':int(driver[0]),
-            'c_loc':f"{driver[2][1]},{driver[2][0]}",
-            'p_loc':sgetKey(f"prev_loc_{int(driver[0])}"),
+            'c_loc':{"latitude":driver[2][1],
+                    "longitude":driver[2][0]},
+            'p_loc':{"latitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[0]),
+                    "longitude":float(sgetKey(f"prev_loc_{int(driver[0])}").split(",")[1])},
             'mark':driver[3],
             'distance':driver[4],
             'time':driver[5]
