@@ -147,11 +147,15 @@ class DriverSerializer(serializers.ModelSerializer):
         car_tex_passport_images = self.validated_data.pop('car_tex_passport_images',[])
         license_images = self.validated_data.pop('license_images',[])
         obj = super().save(**kwargs)
+        
         self.save_images(obj,car_images,car_tex_passport_images,license_images)
-        obj.user.first_name = self.validated_data['first_name']
-        obj.user.last_name = self.validated_data['last_name']
-        obj.user.complete_profile = True
+        first_name,last_name = self.validated_data.get('first_name',None),self.validated_data.get('last_name',None)
+        if first_name:
+            obj.user.first_name = first_name
+        if last_name:
+            obj.user.last_name = last_name
         obj.user.save()
+        obj.user.is_profile_complated
         return obj
     
     def save_images(self,obj,car_images,car_tex_passport_images,license_images):

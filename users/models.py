@@ -70,6 +70,15 @@ class User(AbstractUser,ModelWithTimestamps):
             self.save()
         return super().delete(**kwargs)
     
+    @property
+    def is_profile_complated(self):
+        driver = self.driver
+        if self.first_name and self.last_name and driver.profile_image and driver.car_images.all().count() > 4 and driver.car_tex_passport_images.all().exists() and \
+            driver.license_images.all().exists() and driver.car_model and driver.car_name and driver.car_number and driver.car_color and driver.car_manufactured_date and \
+            driver.car_tex_passport_date and driver.license_date:
+            self.complete_profile = True
+            self.save()
+    
     def __str__(self):
         return f"{self.first_name} - {self.last_name} | {self.phone}"
 
