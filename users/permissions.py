@@ -64,7 +64,7 @@ class IsActive(permissions.BasePermission):
         user: User = request.user
         if not bool(user and user.is_authenticated):
             return False
-        if not user.is_verified or user.blocked_at:
+        if not user.confirmed_at or user.blocked_at:
             return False
         return True
 

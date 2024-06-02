@@ -32,9 +32,12 @@ class BalanceView(viewsets.ViewSet):
 
     def list(self,request):
         if request.user.role == 'driver':
-            balance = Balance.objects.get(driver__user = request.user)
-            serializer = BalanceSerializer(balance)
-            return response.Response(serializer.data,status=status.HTTP_200_OK)
+            if request.user.is_verified:
+                balance = Balance.objects.get(driver__user = request.user)
+                serializer = BalanceSerializer(balance)
+                return response.Response(serializer.data,status=status.HTTP_200_OK)
+            else:
+                raise BaseAPIException("you are not verified")
         elif request.user.role =='admin':
             balance = Balance.objects.all()
             serializer = BalanceSerializer(balance,many=True)
