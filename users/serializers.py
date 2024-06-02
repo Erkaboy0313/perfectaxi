@@ -4,6 +4,7 @@ from django.conf import settings
 from PerfectTaxi.exceptions import BaseAPIException
 from .models import User,Driver,Client,Code,DocumentImages,DriverAvailableService
 from feedback.tasks import populate_mark
+from category.models import CarService
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -27,6 +28,8 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 user = Driver.objects.create(user = base_user)
             elif base_user.role == base_user.UserRole.CLIENT:
                 user = Client.objects.create(user = base_user)
+                base_user.is_verified = True
+                base_user.save()
         else:
             if base_user.role == base_user.UserRole.DRIVER:
                 user = Driver.objects.get(user = base_user)
@@ -213,7 +216,13 @@ class DriverInfoSeriazer(serializers.ModelSerializer):
         model = Driver
         fields = ['name','phone','car_name','car_number','car_color']
 
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarService
+        fields = ['id','service']
+
 class DriverServiceSerializer(serializers.ModelSerializer):
+    service = ServiceSerializer(read_only = True)
     class Meta:
         model = DriverAvailableService
-        fields = '__all__'
+        fields = ["id","service","on"]

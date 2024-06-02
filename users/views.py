@@ -112,7 +112,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
 
 class DriverAvailabelServiceView(viewsets.ModelViewSet):
-    http_method_names = ['get','post']
+    http_method_names = ['get','patch']
     permission_classes = (IsActive,CanChangeStatus)
     serializer_class = serializers.DriverServiceSerializer
     

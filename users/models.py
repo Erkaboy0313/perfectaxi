@@ -124,7 +124,7 @@ class Driver(models.Model):
 
     @property
     def name(self):
-        return self.user.name
+        return f"{self.user.first_name} - {self.user.last_name}"
 
     @property
     async def aprofile_image(self):

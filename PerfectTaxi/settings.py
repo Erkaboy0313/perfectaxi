@@ -146,6 +146,44 @@ DATABASES = {
     # }
 }
 
+if not DEBUG:
+    LOGGING = {
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "verbose": {
+                "format": "{levelname} {asctime} {module} {message}",
+                "style": "{",
+            },
+        },
+        "handlers": {
+            "info": {
+                "level": "INFO",
+                "class": "logging.FileHandler",
+                "formatter": "verbose",
+                'filename': BASE_DIR / 'info.log',
+            },
+            "error": {
+                "level": "ERROR",
+                "class": "logging.FileHandler",
+                "formatter": "verbose",
+                'filename': BASE_DIR / 'error.log',
+            },
+        },
+        "loggers": {
+            "django": {
+                "handlers": ["info"],
+                "level":"INFO",
+                "propagate": True,
+            },
+            "": {
+                "handlers": ["error"],
+                "level":"ERROR",
+                "propagate": True,
+            },
+        },
+    }
+
 
 PAYMENT_VARIANTS = {
     'click' : ('click.ClickProvider', {
