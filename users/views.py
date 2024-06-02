@@ -104,7 +104,7 @@ class ClientViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
-        if request.user.is_admin:
+        if request.user.is_admin():
             return super().list(request, *args, **kwargs)
         else:
             client = Client.objects.select_related("user").get(user = request.user)
