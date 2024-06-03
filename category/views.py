@@ -4,6 +4,7 @@ from .serializers import *
 from users.permissions import IsActive
 from users.models import Client
 
+
 class CarSeriviceView(viewsets.ModelViewSet):
     queryset = CarService.objects.all()
     serializer_class = CarServiceSerializer
@@ -37,3 +38,18 @@ class SavedLocationView(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         client = Client.objects.get(user = self.request.user)
         serializer.save(user = client)
+
+class CarBrendViewSet(viewsets.ViewSet):
+
+    def list(self,request):
+        queryset = CarBrend.objects.all()
+        serializer = CarBrendSerializer(queryset,many=True)
+        return response.Response(serializer.data,status=status.HTTP_200_OK)
+
+class ColorViewSet(viewsets.ViewSet):
+
+    def list(self,request):
+        queryset = Color.objects.all()
+        serializer = ColorSerializer(queryset,many=True)
+        return response.Response(serializer.data,status=status.HTTP_200_OK)
+

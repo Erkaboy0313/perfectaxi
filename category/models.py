@@ -9,9 +9,9 @@ class CarService(models.Model):
         COMFORT = 'comfort'
 
     service = models.CharField(max_length=100,choices=ServiceChoices.choices,null=True)
-    includedCars = models.CharField(max_length=255,null=True)
-    start_price = models.IntegerField(default=0)
-    price_per_km = models.FloatField(default=0)
+    includedCars = models.CharField(max_length = 255,null = True)
+    start_price = models.IntegerField(default = 0)
+    price_per_km = models.FloatField(default = 0)
     price_per_min = models.FloatField(default = 0)
     wait_price_per_min = models.FloatField(default = 0)
     free_wait_time = models.IntegerField(default = 0)
@@ -33,3 +33,14 @@ class SavedLocation(models.Model):
     def __str__(self):
         return f"{self.name} | {self.user}"
 
+class CarBrend(models.Model):
+    name = models.CharField(max_length=100,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+class Color(models.Model):
+    name = models.CharField(max_length=100,blank=True, null=True)
+
+    def __str__(self):
+        return self.name
