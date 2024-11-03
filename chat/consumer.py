@@ -56,9 +56,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send_receiver(user_id,data)    
         return await self.send(text_data=json.dumps({"message":{"command":"send","status":True}}))
     
+    async def send_admin_message(self,data):
+        user = self.scope['user']
+        chat_room_name = data['chat']
+        message_text = data['message']
+        chat = await Room.objects.aget(name = chat_room_name)
+        message = await Message.objects.acreate(author = user,room = chat,message = message_text)
+        data = {
+            "chat": await chat_room_serializer(chat),
+            "messages": await message_serializer(message)
+        }
+        await self.send_to_admin(data)
+        return await self.send(text_data=json.dumps({"message":{"action":"send","status":True}}))
+
+
     async def contact_admin(self,data):
         user = self.scope['user']
-        chat = Room.aobjects.get_chat_with_admin(user)
+        chat = await Room.aobjects.get_chat_with_admin(user)
         messages = await Message.aobjects.retrive_chat_messages(chat)
         data = {
             "command":"fetch_message",
@@ -70,14 +84,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
     commands = {
         "fetch_message":fetch_message,
         "new_message":new_message,
-        "contact with admin":contact_admin
+        "contact_with_admin":contact_admin,
+        "admin_message":send_admin_message,
     }
+
+
+    async def send_to_admin(self,data):
+        await self.channel_layer.group_send(
+            "admin_chat",
+            {
+                "type":"chat_message",
+                "action":"new_message",
+                "message":data
+            }
+        )
+
     
     async def send_receiver(self,receiver_id,data):
         await self.channel_layer.group_send(
             f"chat_user_{receiver_id}",
             {
                 "type":"chat_message",
+                "action":"new_message",
                 "message":data
             }
         )
@@ -98,5 +126,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
     # Receive message from room group
     async def chat_message(self, event):
         message = event["message"]
+        action = event["action"]
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({"message": message}))
+        await self.send(text_data=json.dumps({
+            "action":action,
+            "message": message}))

@@ -38,6 +38,7 @@ class OrderHistoryView(viewsets.ViewSet):
                 )
             serializer = DriverOrderHistorySerializer(driver_orders,many = True)
         if request.user.role == "client":
+            
             orders = Order.objects.filter(client__user = request.user).prefetch_related('driver','carservice')
             serializer = ClientOrderHistory(orders,many = True)
         return Response(serializer.data,status=status.HTTP_200_OK)

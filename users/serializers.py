@@ -87,18 +87,15 @@ class TestVerifySerializer(serializers.Serializer):
                 user = Driver.objects.get(id = data['user']).user
             elif data['role'] == "client":
                 user = Client.objects.get(id = data['user']).user
-            
-            #temporary should be specific login for admin.
-            elif data['role'] == 'admin':
-                user = User.objects.get(id = data['user'])
                 
             if int(data['code']) != 66666:
                 raise BaseAPIException('Kod notogri kiritildi')
-            if user.blocked_at:
+            if user.is_block:
                 raise BaseAPIException("Foydalanuvchi bloklangan")
             if not user.confirmed_at:
                 user.confirm
         except BaseException as e:
+            print(e)
             raise BaseAPIException("Foydalanuvchi topilmadi")
         token, __ = Token.objects.get_or_create(user=user)
         return {'token': token.key, "profile":user.complete_profile}
@@ -179,14 +176,9 @@ class DriverSerializer(serializers.ModelSerializer):
                 obj.license_images.add(img)
 
     def to_representation(self, instance):
-        request = self._kwargs['context']['request']
+
         obj = super().to_representation(instance)
         
-        if request.user.is_admin():
-            obj['car_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_images.all()]
-            obj['car_tex_passport_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.car_tex_passport_images.all()]
-            obj['license_images'] = [f"{settings.HOST}{x.image.url}" for x in instance.license_images.all()]
-
         for key,value in obj['user'].items():
             obj[key] = value
         
@@ -214,7 +206,7 @@ class DriverInfoSeriazer(serializers.ModelSerializer):
     phone = serializers.CharField()
     class Meta:
         model = Driver
-        fields = ['name','phone','car_name','car_number','car_color']
+        fields = ['name','phone','car_name','car_number','car_color','profile_image']
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:

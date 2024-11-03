@@ -8,7 +8,7 @@ class Room(models.Model):
         ADMIN = 'admin'
     
     users = models.ManyToManyField('users.User')
-    name = models.CharField(max_length = 255,blank=True, null=True)
+    name = models.CharField(max_length = 255,blank=True, null=True,unique=True)
     type = models.CharField(max_length = 10,choices = Room_type.choices, default = Room_type.PUBLIC)
     
     

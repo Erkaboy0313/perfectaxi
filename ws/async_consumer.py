@@ -99,7 +99,6 @@ class OrderConsumer(AsyncWebsocketConsumer):
         serialized_data = await costSerializer(costs)
         return await self.send_price(serialized_data)  # Assuming send_price is async
 
-    # need to be fixed for bitch
     async def newOrder(self, data):
         user = self.scope['user']
         await cancelTask(f'sendtaskclient_{user.id}')  # Assuming cancelTask is async
@@ -126,10 +125,10 @@ class OrderConsumer(AsyncWebsocketConsumer):
         res = await get_order(user, data)  # Assuming get_order is async
         if res:
             await self.channel_layer.group_send(  # Using await directly for async channel_layer
-                f"client_{res[2].client.user.id}",
+                f"client_{res[1].client.user.id}",
                 {
                     'type': 'send_driver_user',
-                    'driver': res[1]
+                    'driver': await lastOrderClient(res[1].client.user)
                 }
             )
             return await self.send_order_driver(res[0])  # Assuming send_order_driver is async

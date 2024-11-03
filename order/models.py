@@ -23,6 +23,7 @@ class Order(models.Model):
     carservice = models.ForeignKey('category.CarService',on_delete=models.CASCADE,null=True,blank=True)
     contact_number = models.CharField(max_length=35, null=True,blank=True)
     start_adress = models.CharField(max_length=255, null=True,blank=True)
+    region_code = models.CharField(max_length=5,blank=True, null=True)
     start_point = models.CharField(max_length=40, null=True,blank=True)
     ordered_time = models.DateTimeField(auto_now_add=True,blank=True)
     taken_time = models.DateTimeField(null=True,blank=True)
@@ -119,7 +120,7 @@ class DriverOrderHistory(models.Model):
     report = DriverHistoryManager()
 
 class Point(models.Model):
-    order = models.ForeignKey(Order,on_delete=models.CASCADE)
+    order = models.ForeignKey(Order,on_delete=models.CASCADE,related_name='points')
     point_number = models.IntegerField(null = True)
     point_address = models.CharField(max_length = 255, null=True, blank=True)
     point = models.CharField(max_length=40, null=True)

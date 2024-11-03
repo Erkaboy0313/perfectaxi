@@ -1,6 +1,6 @@
 from users.models import Client,Driver
 from order.models import Order,RejectReason,DriverOrderHistory
-from order.serializers import OrderSeriazer
+from order.serializers import OrderCreateSeriazer
 from django.db.models import Q
 from payment.models import Balance
 from django_celery_beat.models import PeriodicTask,IntervalSchedule
@@ -18,7 +18,7 @@ async def createOrder(user, data):
     client = await Client.objects.aget(user=user)  # Assuming Client.objects.get is async
 
     # Validate and serialize the order data
-    serializer = OrderSeriazer(data=data)
+    serializer = OrderCreateSeriazer(data=data)
     await asyncio.to_thread(functools.partial(serializer.is_valid,raise_exception=True))
     data = await asyncio.to_thread(functools.partial(serializer.save,client=client))
     
@@ -32,7 +32,7 @@ async def createOrder(user, data):
 # Client's last orders
 async def lastOrderClient(user):
     # Retrieve orders for the client, excluding specific statuses
-    last_orders = Order.objects.select_related('client','driver','driver__user','carservice').prefetch_related("services").filter(  # Assuming filter is async
+    last_orders = Order.objects.select_related('client','driver','driver__user','carservice').prefetch_related("services").filter( 
         client__user=user
     ).exclude(
         Q(status="delivered") | Q(status="rejected") | Q(status="inactive")
@@ -145,7 +145,6 @@ async def get_order(user, data):
         await _order.asave()  # Assuming save is async
 
         order = await orderToDriverSerializer(_order)
-        driver = await driverInfoSerializer(driver)
 
         await setKey(  # Assuming setKey is async
             f"active_driver_{user.id}", f"client_{_order.client.user.id}"
@@ -155,7 +154,7 @@ async def get_order(user, data):
         await removeKey(f"prew_driver_{data['order_id']}")  # Assuming removeKey is async
         await removeKey(f'new_order_driver_{user.id}')  # Assuming removeKey is async
         await aremove_location(user.id)
-        return (order, driver, _order)
+        return (order, _order)
     return False
 
 async def arrive_address(data):
@@ -185,7 +184,7 @@ async def finish_drive(data):
     try:
         order = await Order.objects.select_related('client','client__user','driver','driver__user','carservice').aget(id=int(order_id),status = Order.OrderStatus.DELIVERING)  
         order.status = 'delivered'
-        if not order.point_set.all().aexists():
+        if not order.points.all().aexists():
             total_distance = data.get('total_distance', None)
             total_time = datetime.now() - order.started_time
             if total_distance:

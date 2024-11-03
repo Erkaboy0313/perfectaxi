@@ -37,7 +37,7 @@ async def orderSeriazer(data):
         "id":data.id,
         "client":data.client.id,
         "driver":None,
-        "carservice":data.carservice.service,
+        "carservice":await carServiceSerialzier(data.carservice),
         "contact_number":data.contact_number,
         "start_adress":data.start_adress,
         "latitude":float(data.start_point.split(',')[0]),
@@ -46,14 +46,15 @@ async def orderSeriazer(data):
         "distance":data.distance,
         "price":data.price,
         "payment_type":data.payment_type,
-        "services":[x.name for x in data.services.all()]
+        "services":await ServiceSerializer(data.services.all())
     }
     return obj
 
 async def driverInfoSerializer(data):
     obj = {
         "id" : data.id,
-        "name" : await data.aname,
+        "first_name" : data.user.first_name,
+        "last_name" : data.user.last_name,
         "profile_image" : await data.aprofile_image,
         "car_model" : data.car_model,
         "car_name" : data.car_name,
@@ -70,7 +71,7 @@ async def lastOrderserializer(data):
             "client":order.client.id,
             "status":order.status,
             "driver":await driverInfoSerializer(order.driver) if order.driver else None,
-            "carservice":order.carservice.service,
+            "carservice":await carServiceSerialzier(order.carservice),
             "contact_number":order.contact_number,
             "start_adress":order.start_adress,
             "latitude":float(order.start_point.split(',')[0]),
@@ -79,7 +80,7 @@ async def lastOrderserializer(data):
             "distance":order.distance,
             "price":order.price,
             "payment_type":order.payment_type,
-            "services":[x.name for x in order.services.all()]
+            "services":await ServiceSerializer(order.services.all())
         }
         orders.append(obj)
     return orders
@@ -94,7 +95,18 @@ async def orderToDriverSerializer(data):
         "price":data.price,
         "payment_type":data.payment_type,
         "status":data.status,
-        "services":[x.name for x in data.services.all()],
+        "services":await ServiceSerializer(data.services.all()),
         "points":[await point(x) async for x in Point.objects.filter(order = data)]
     }
     return obj
+
+async def ServiceSerializer(services):
+    return [{"id":x.id,"name":x.name,'cost':x.cost} async for x in services]
+
+async def carServiceSerialzier(car_service):
+    return {
+        'id':car_service.id,
+        'service':car_service.service,
+        'includedCars':car_service.includedCars,
+        'start_price':car_service.start_price,
+    }

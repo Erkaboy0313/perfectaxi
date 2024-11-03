@@ -18,7 +18,7 @@ application = ProtocolTypeRouter({
     "websocket":AllowedHostsOriginValidator(
         TokenAuthMiddlewareStack(
             URLRouter(
-                ws.routing.websocket_urlpatterns
+                ws.routing.websocket_urlpatterns,
             )
         ),
     ),

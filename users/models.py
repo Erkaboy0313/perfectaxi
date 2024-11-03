@@ -47,6 +47,10 @@ class User(AbstractUser,ModelWithTimestamps):
         self.confirmed_at = timezone.now()
         self.save()
 
+    async def ais_admin(self):
+        admin_role = str(self.UserRole.ADMIN)
+        return self.role == admin_role
+
     def is_admin(self):
         """Является ли админом"""
 
