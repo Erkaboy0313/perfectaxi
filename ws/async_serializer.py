@@ -36,6 +36,7 @@ async def orderSeriazer(data):
     obj = {
         "id":data.id,
         "client":data.client.id,
+        "status":data.status,
         "driver":None,
         "carservice":await carServiceSerialzier(data.carservice),
         "contact_number":data.contact_number,

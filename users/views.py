@@ -12,7 +12,7 @@ from .models import Client, User, Driver, DriverAvailableService
 from payment.models import Balance
 from rest_framework.response import Response
 
-# Create your views here.
+
 @method_decorator(transaction.non_atomic_requests, name='dispatch')
 class AuthViewSet(viewsets.GenericViewSet):
     queryset = User.objects.all()

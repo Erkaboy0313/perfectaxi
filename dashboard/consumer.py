@@ -1,5 +1,9 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
+from users.models import User
+from chat.models import Message,Room
+from chat.serializers import messages_serializer,chat_room_serializer
+from .async_view import load_admin_chats
 # from .decorators import is_admin
 
 
@@ -10,9 +14,7 @@ class AdminConsumer(AsyncWebsocketConsumer):
             user = self.scope['user']
             if user.is_authenticated:
                 if await user.ais_admin():
-                    print("worked")
                     return await func(self,*args,**kwargs)
-            print("not worked")
             await self.accept()
             await self.chat_message({'data':"User has no privilages"},'error')
         return wrapper
@@ -32,16 +34,31 @@ class AdminConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_discard(
             self.room_group_name, self.channel_name
         )
+        
+    async def fetch_message(self,data):
+        room_name = data['room_name']
+        chat = await Room.objects.aget(name = room_name)
+        messages = await Message.aobjects.retrive_chat_messages(chat)
+        data = {
+            "chat": await chat_room_serializer(chat),
+            "messages":await messages_serializer(messages)
+        }
+        return await self.chat_message(data=data,action='fetch_messages')
+      
+    async def fech_chats(self, data):
+        chats = await load_admin_chats()
+        return await self.chat_message(chats,'chats')
 
     commands = {
-
+        "fetch_chat":fech_chats,
+        "fetch_message":fetch_message,
     }
 
     async def receive(self, text_data):
         data = json.loads(text_data)
         await self.commands[data['command']](self, data)  # Call async commands directly
 
-    async def chat_message(self,data:dict,action:str = None):
+    async def chat_message(self,data,action:str = None):
         action = action if action else 'admin_message'
         await self.send(
             text_data=json.dumps({

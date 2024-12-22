@@ -7,8 +7,8 @@ from django_celery_beat.models import PeriodicTask,IntervalSchedule
 from utils.cache_functions import setKey,getKey,removeKey
 from utils.cordinates import update_driver_location,remove_location,aremove_location
 from datetime import datetime
-from .tasks import sendDriverLocation,sendActiveDriverLocation,charge_driver,find_drivers_to_order
-from .async_serializer import orderSeriazer,lastOrderserializer,orderToDriverSerializer,driverInfoSerializer
+from .tasks import sendDriverLocation,sendActiveDriverLocation,charge_driver
+from .async_serializer import lastOrderserializer,orderToDriverSerializer
 import asyncio,functools
 import json
 
@@ -22,12 +22,14 @@ async def createOrder(user, data):
     await asyncio.to_thread(functools.partial(serializer.is_valid,raise_exception=True))
     data = await asyncio.to_thread(functools.partial(serializer.save,client=client))
     
-    order = await Order.objects.select_related('client','carservice').prefetch_related('services').aget(id = data.id)
+    order = await Order.objects.select_related('carservice').aget(id = data.id)
     
-    serialized_data = await orderSeriazer(order)
+    await setKey(f"order_extra_info_{order.id}",{"price":order.price,"address":order.start_adress},timeout=600)
+
+    serialized_data = await lastOrderClient(user)
 
     # Return both the serialized order data and the service associated with the order
-    return (serialized_data, order.carservice.service)
+    return (serialized_data, order)
 
 # Client's last orders
 async def lastOrderClient(user):
@@ -98,31 +100,6 @@ async def getOnlineDrivers(user, location, service):
     task.enabled = True
     await task.asave()  # Assuming save is async
 
-async def sendOrderToDriverView(order, user, location, service):
-    interval, created = await IntervalSchedule.objects.aget_or_create(  
-        every=30, period=IntervalSchedule.SECONDS
-    )
-    interval2, created = await IntervalSchedule.objects.aget_or_create(  
-        every=15, period=IntervalSchedule.SECONDS
-    )
-
-    task = await PeriodicTask.objects.acreate(  
-        name=order, interval=interval
-    )
-    task2 = await PeriodicTask.objects.acreate(  
-        name=f"find_{order}", interval=interval2
-    )
-
-    find_drivers_to_order.delay(order, location, service)
-
-    task.task = 'sendOrderToDriver'
-    task.args = json.dumps([order, user])
-    await task.asave()  # Assuming save is async
-
-    task2.task = 'find_drivers_to_order'
-    task2.args = json.dumps([order, location, service])
-    await task2.asave()  # Assuming save is async
-
 async def cancelTask(name):
     try:
         task = await PeriodicTask.objects.aget(name=name)  
@@ -151,7 +128,12 @@ async def get_order(user, data):
         )
         sendActiveDriverLocation.delay(user.id, f"client_{_order.client.user.id}")
         
-        await removeKey(f"prew_driver_{data['order_id']}")  # Assuming removeKey is async
+        # modify this later
+        data = await getKey(f'active_order_{_order.id}')
+        data['status'] = 'assigned'
+        await setKey(f'active_order_{_order.id}',data)
+        
+        await removeKey(f"prew_driver_{_order.id}")  # Assuming removeKey is async
         await removeKey(f'new_order_driver_{user.id}')  # Assuming removeKey is async
         await aremove_location(user.id)
         return (order, _order)
@@ -225,6 +207,8 @@ async def cancel_drive(data):
             return (True, order)
         except Order.DoesNotExist:
             return (False, "order not found")
+        except Exception as e:
+            return (False, f"{e}")
     else:
         return (False, "data incomplete")
 

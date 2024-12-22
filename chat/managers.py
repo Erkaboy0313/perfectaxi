@@ -1,5 +1,6 @@
-from django.db.models import Manager
-
+from django.db.models import Manager,Case,When,F,CharField,Subquery,OuterRef,Value
+from django.db.models.functions import Concat
+from users.models import User
 
 class RoomManager(Manager):
     
@@ -11,6 +12,20 @@ class RoomManager(Manager):
             await chat.users.aadd(user1)
             await chat.users.aadd(user2)
         return chat
+    
+    async def load_admin_chats(self):
+        # return self.filter(type = 'admin').prefetch_related('users')
+        
+        admin_rooms = self.filter(type='admin').prefetch_related('users')
+        
+        non_admin_user_subquery = Subquery(
+            User.objects.filter(
+                room__id=OuterRef('id'),  # Filter users in the current room
+            ).exclude(role=User.UserRole.ADMIN).annotate(full_name=Concat(F('first_name'), Value(' '), F('last_name')))
+            .values('full_name')[:1]
+        )
+        
+        return admin_rooms.annotate(non_admin_user_name=non_admin_user_subquery)
     
     async def get_chat_with_admin(self,client):
         chat = await self.filter(users = client,type = 'admin').afirst()

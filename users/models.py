@@ -43,6 +43,10 @@ class User(AbstractUser,ModelWithTimestamps):
         return f"{self.last_name} {self.first_name}"
     
     @property
+    def afull_name(self):
+        return f"{self.last_name} {self.first_name}"
+    
+    @property
     def confirm(self):
         self.confirmed_at = timezone.now()
         self.save()
@@ -194,7 +198,7 @@ class Client(models.Model):
 
 class DocumentImages(models.Model):
     image = models.FileField(upload_to='UserDocuments/')
-
+    
 class Code(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     number = models.CharField(max_length=5)

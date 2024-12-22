@@ -9,8 +9,10 @@ from utils.cache_functions import setKey,getKey,removeKey
 
 from .async_view import createOrder,lastOrderClient,lastOrderDriver,lastOrderDriver,\
     setDriverLocation,removeDriverLocation,setDriverOnlineStatus,setClientOnlineStatus,\
-        getOnlineDrivers,sendOrderToDriverView,cancelTask,get_order,arrive_address,\
+        getOnlineDrivers,cancelTask,get_order,arrive_address,\
             start_drive,finish_drive,cancel_drive,check_balance,go_online,set_busy
+
+from .tasks import sendOrderTodriverTask
 
 from .async_serializer import costSerializer
 import json
@@ -76,6 +78,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
         user = self.scope['user']
         await cancelTask(f'sendtaskclient_{user.id}')  
         if user.role == 'driver':
+            print('driver removed')
             await removeDriverLocation(user)
             await setDriverOnlineStatus(user, False)  
         elif user.role == 'client':
@@ -104,9 +107,9 @@ class OrderConsumer(AsyncWebsocketConsumer):
         await cancelTask(f'sendtaskclient_{user.id}')  # Assuming cancelTask is async
 
         strat_point = f"{data['latitude']},{data['longitude']}"
-        order, service = await createOrder(user, data)  # Assuming createOrder is async
+        order, order_obj = await createOrder(user, data)  # Assuming createOrder is async
 
-        await sendOrderToDriverView(f"order_{order['id']}", user.id, strat_point, service)  # Assuming sendOrderToDriverView is async
+        sendOrderTodriverTask.delay(f"order_{order_obj.id}", strat_point, order_obj.carservice.service)
         
         return await self.send_order(order)  # Assuming send_order is async
 
@@ -118,10 +121,9 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if location:
             await getOnlineDrivers(f'client_{user.id}', location, service) 
 
-
     async def getOrder(self, data):
         user = self.scope['user']
-        await cancelTask(f"order_{data['order_id']}")  # Assuming cancelTask is async
+
         res = await get_order(user, data)  # Assuming get_order is async
         if res:
             await self.channel_layer.group_send(  # Using await directly for async channel_layer
@@ -204,8 +206,11 @@ class OrderConsumer(AsyncWebsocketConsumer):
             if res.driver:
                 driver_group = f'driver_{res.driver.user.id}'
                 await self.send_message_to_group(driver_group, response_data['message'], action)  # Assuming send_message_to_group is async
-
-            return await self.order_status(response_data)  # Assuming order_status is async
+            
+            user = self.scope['user']
+            res = await lastOrderClient(user)  # Assuming lastOrderClient is async
+            await self.order_status(response_data)  # Assuming order_status is async
+            return await self.send_order(res)
         else:
             return await self.send_error(res)
     
@@ -233,11 +238,11 @@ class OrderConsumer(AsyncWebsocketConsumer):
 
     async def seen_order(self, data):
         order_id = data['order_id']
-        order = await getKey(f"prew_driver_{order_id}")
-        if order:  
-            if order['driver_id'] == self.scope['user'].id:
-                order['seen'] = True
-                await setKey(f"prew_driver_{order_id}", order)  
+        data = await getKey(f'active_order_{order_id}')
+        if data:  
+            if data['driver'] == self.scope['user'].id:
+                data['status'] = 'seen'
+                await setKey(f'active_order_{order_id}',data)
 
     async def miss_order(self, data):
         try:
@@ -248,6 +253,15 @@ class OrderConsumer(AsyncWebsocketConsumer):
             await removeKey(f"prew_driver_{order_id}")  # Assuming removeKey is async
             await removeKey(f"new_order_driver_{user_id}")  # Assuming removeKey is async
             await DriverOrderHistory.objects.acreate(driver=driver, order = order, status = order.OrderStatus.REJECTED)
+            
+            data = await getKey(f'active_order_{order.id}')
+            if data:  
+                if data['driver'] == self.scope['user'].id:
+                    data['status'] = 'rejected'
+                    await setKey(f'active_order_{order.id}',data)
+            
+            sendOrderTodriverTask.delay(f"order_{order['id']}", order.start_point, order.carservice.service)
+            
             # Other logic here
         except:
             return await self.send_error('order not found')
@@ -347,7 +361,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
             text_data=json.dumps(
                 {
                     "action": "failed",
-                    "message": "couldn't find drivers"
+                    "message": await lastOrderClient(event['user'])
                 }
             )
         )

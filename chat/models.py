@@ -22,6 +22,7 @@ class Message(models.Model):
     author = models.ForeignKey('users.User',on_delete=models.CASCADE)
     room = models.ForeignKey(Room,on_delete = models.CASCADE)
     message = models.TextField()
+    seen = models.BooleanField(default=False)
     
     aobjects = MessageManager()
     objects = models.Manager()
