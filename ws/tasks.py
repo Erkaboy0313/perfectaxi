@@ -94,9 +94,13 @@ def find_drivers_to_order(order,location,service,order_time_str):
     
     order_time = datetime.strptime(order_time_str, '%Y-%m-%d %H:%M:%S')
     order_time = tz.localize(order_time)
+    
+    extra_data = sgetKey(f'order_extra_info_{order_id}')
+    
+    if not extra_data['status'] == Order.OrderStatus.ACTIVE:
+        return
 
-
-    if (order_time + timedelta(minutes=6)) < datetime.now(tz):
+    if (order_time + timedelta(minutes=6)) < datetime.now(tz) :
         active_order = Order.objects.get(id = order_id)
         active_order.status = 'inactive'
         active_order.save()

@@ -194,6 +194,11 @@ class OrderConsumer(AsyncWebsocketConsumer):
     async def cancelDrive(self, data):
         status, res = await cancel_drive(data)  # Assuming cancel_drive is async
         if status:
+            
+            extra_data = await getKey(f'order_extra_info_{res.id}')
+            extra_data['status'] = 'canceled'
+            await setKey(f'order_extra_info_{res.id}',extra_data)
+            
             response_data = {
                 "message": {
                     "order_id": res.id,
