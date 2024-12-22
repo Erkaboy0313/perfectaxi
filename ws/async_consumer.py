@@ -196,8 +196,9 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if status:
             
             extra_data = await getKey(f'order_extra_info_{res.id}')
-            extra_data['status'] = 'canceled'
-            await setKey(f'order_extra_info_{res.id}',extra_data)
+            if extra_data:
+                extra_data['status'] = 'canceled'
+                await setKey(f'order_extra_info_{res.id}',extra_data)
             
             response_data = {
                 "message": {
