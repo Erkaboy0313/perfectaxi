@@ -45,7 +45,7 @@ async def lastOrderClient(user):
         serialized_data = await lastOrderserializer(last_orders)
         return serialized_data
     else:
-        return False  # Indicate no orders found
+        return []  # Indicate no orders found
     
 # Driver's last orders
 async def lastOrderDriver(user):
