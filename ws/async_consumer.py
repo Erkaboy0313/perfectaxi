@@ -14,7 +14,7 @@ from .async_view import createOrder,lastOrderClient,lastOrderDriver,lastOrderDri
 
 from .tasks import sendOrderTodriverTask
 
-from .async_serializer import costSerializer
+from .async_serializer import costSerializer,orderToDriverSerializer
 import json
 
 
@@ -130,7 +130,14 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 f"client_{res[1].client.user.id}",
                 {
                     'type': 'send_driver_user',
-                    'driver': await lastOrderClient(res[1].client.user)
+                    'driver': {"order_id":res[1].id}
+                }
+            )
+            await self.channel_layer.group_send(  # Using await directly for async channel_layer
+                f"client_{res[1].client.user.id}",
+                {
+                    'type': 'send_order',
+                    'orders': await lastOrderClient(res[1].client.user)
                 }
             )
             return await self.send_order_driver(res[0])  # Assuming send_order_driver is async
@@ -151,7 +158,16 @@ class OrderConsumer(AsyncWebsocketConsumer):
             }
             action = "arrived"
             await self.order_status(response_data)  # Assuming order_status is async
-            return await self.send_message_to_group(client_group, response_data['message'], action)  # Assuming send_message_to_group is async
+            await self.send_order_driver(await orderToDriverSerializer(res))
+            await self.send_message_to_group(client_group, response_data['message'], action)
+            
+            await self.channel_layer.group_send(  
+                client_group,
+                {
+                    'type': 'send_order',
+                    'orders': await lastOrderClient(res.client.user)
+                }
+            )
         else:
             return await self.send_error("order not found")  # Assuming send_error is async
         
@@ -168,8 +184,16 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 "action": "start_drive"
             }
             action = "start_drive"
-            await self.order_status(response_data)  # Assuming order_status is async
-            return await self.send_message_to_group(client_group, response_data['message'], action)  # Assuming send_message_to_group is async
+            await self.order_status(response_data)
+            await self.send_order_driver(await orderToDriverSerializer(res))  # Assuming order_status is async
+            await self.send_message_to_group(client_group, response_data['message'], action)
+            await self.channel_layer.group_send(  
+                client_group,
+                {
+                    'type': 'send_order',
+                    'orders': await lastOrderClient(res.client.user)
+                }
+            )  # Assuming send_message_to_group is async
         else:
             return await self.send_error("order not found")  # Assuming send_error is async
 
@@ -186,8 +210,16 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 "action": "finish_drive"
             }
             action = "finish_drive"
-            await self.order_status(response_data)  # Assuming order_status is async
-            return await self.send_message_to_group(client_group, response_data['message'], action)  # Assuming send_message_to_group is async
+            await self.order_status(response_data)
+            await self.send_order_driver(await orderToDriverSerializer(res)) # Assuming order_status is async
+            await self.send_message_to_group(client_group, response_data['message'], action)
+            await self.channel_layer.group_send(  
+                client_group,
+                {
+                    'type': 'send_order',
+                    'orders': await lastOrderClient(res.client.user)
+                }
+            )  # Assuming send_message_to_group is async
         else:
             return await self.send_error("order not found")
 
@@ -395,11 +427,13 @@ class OrderConsumer(AsyncWebsocketConsumer):
         
     # send order to user
     async def send_order(self, massage):
+        data = massage if not "orders" in massage else massage['orders']
+        
         await self.send(  # Assuming self.send is async
             text_data=json.dumps(
                 {
                     "action": "order",
-                    "message": massage
+                    "message": data
                 }
             )
         )

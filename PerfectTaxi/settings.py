@@ -93,6 +93,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
     ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Replace with desired permissions
+    ],
     'DATETIME_FORMAT': '%d-%m-%Y %H:%M:%S'
 }
 
@@ -147,7 +150,7 @@ DATABASES = {
     # }
 }
 
-if not DEBUG:
+if DEBUG:
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,

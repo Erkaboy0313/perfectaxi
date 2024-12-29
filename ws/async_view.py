@@ -24,7 +24,7 @@ async def createOrder(user, data):
     
     order = await Order.objects.select_related('carservice').aget(id = data.id)
     
-    await setKey(f"order_extra_info_{order.id}",{"price":order.price,"address":order.start_adress,'status':order.status},timeout=600)
+    await setKey(f"order_extra_info_{order.id}",{"price":order.price,"start_adress":order.start_adress,'status':order.status},timeout=600)
 
     serialized_data = await lastOrderClient(user)
 

@@ -28,12 +28,14 @@ class AdminLoginViewSet(ViewSet):
                 return Response({"token":token.key})
         raise BaseAPIException('User not found')
                 
-
-
 class DriverViewset(ModelViewSet):
     queryset = Driver.objects.select_related('user').prefetch_related('car_images','car_tex_passport_images','license_images')
     serializer_class = DriverRegisterSerializer
     # permission_classes = (IsAdmin,)
+    
+    def create(self, request, *args, **kwargs):
+        print(request.data)
+        return super().create(request, *args, **kwargs)
 
     @action(methods=['POST'],detail=True)
     def verify_driver(self,request,*args,**kwargs):

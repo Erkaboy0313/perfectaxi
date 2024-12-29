@@ -130,7 +130,7 @@ import redis,json,os,aiohttp
 from utils.calculateDistance import caculateDistance
 from .cache_functions import setKey
 
-redis_client = redis.Redis(host=os.environ.get('REDIS_HOST1',"127.0.0.1"), port=6379, db=0)
+redis_client = redis.Redis(host=os.environ.get('REDIS_HOST',"127.0.0.1"), port=6379, db=0)
 
 class FindRoute:
     
