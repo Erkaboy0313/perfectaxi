@@ -118,7 +118,7 @@ class VerifySerializer(serializers.Serializer):
             raise BaseAPIException("Foydalanuvchi bloklangan")
         token, __ = Token.objects.get_or_create(user=user)
         return {'token': token.key}
-    
+
 class DocumentImagesSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentImages
@@ -202,11 +202,12 @@ class ClientSerializer(serializers.ModelSerializer):
         return obj
 
 class DriverInfoSeriazer(serializers.ModelSerializer):
-    name = serializers.CharField()
+    first_name = serializers.CharField(source='user.first_name')
+    last_name = serializers.CharField(source='user.last_name')    
     phone = serializers.CharField()
     class Meta:
         model = Driver
-        fields = ['name','phone','car_name','car_number','car_color','profile_image']
+        fields = ['first_name','last_name','phone','car_name','car_number','car_color','profile_image']
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
