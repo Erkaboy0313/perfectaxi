@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from .managers import UserManager,DriverManager,AdminManager
+# from category.models import CarBrend,CarModel,Color
 import datetime
 from random import randint
 from django.utils import timezone
@@ -115,11 +116,11 @@ class Driver(models.Model):
     car_images = models.ManyToManyField('DocumentImages',related_name='car_images')
     car_tex_passport_images = models.ManyToManyField('DocumentImages',related_name='car_text_images')
     license_images = models.ManyToManyField('DocumentImages',related_name='license_images')
-    car_model = models.CharField(max_length=200,null=True)
     status = models.CharField(max_length=20,choices=DriverStatus.choices,default=DriverStatus.BUSY)
-    car_name = models.CharField(max_length=100,null=True)
     car_number = models.CharField(max_length=200,null=True)
-    car_color = models.CharField(max_length=100,null=True)
+    car_model = models.ForeignKey("category.CarBrend",on_delete=models.CASCADE,blank=True,null=True)
+    car_name = models.ForeignKey("category.CarModel",on_delete=models.CASCADE,blank=True,null=True)
+    car_color = models.ForeignKey("category.Color",on_delete=models.CASCADE,blank=True,null=True)
     car_manufactured_date = models.DateField(null=True)
     car_tex_passport_date = models.DateField(null=True)
     license_date = models.DateField(null=True)

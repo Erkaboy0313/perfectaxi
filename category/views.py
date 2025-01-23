@@ -45,11 +45,24 @@ class CarBrendViewSet(viewsets.ViewSet):
         queryset = CarBrend.objects.all()
         serializer = CarBrendSerializer(queryset,many=True)
         return response.Response(serializer.data,status=status.HTTP_200_OK)
+    
+    def retrieve(self, request, *args, **kwargs):
+        brand_id = self.kwargs.get("pk")
+        car_models = CarModel.objects.filter(brend__id = brand_id)
+        serializer = CarModelSerializer(car_models,many=True)
+        return response.Response(serializer.data,status=status.HTTP_200_OK)
 
 class ColorViewSet(viewsets.ViewSet):
 
     def list(self,request):
         queryset = Color.objects.all()
         serializer = ColorSerializer(queryset,many=True)
+        return response.Response(serializer.data,status=status.HTTP_200_OK)
+
+class CarModelViewSet(viewsets.ViewSet):
+
+    def list(self,request):
+        queryset = CarModel.objects.all()
+        serializer = CarModelSerializer(queryset,many=True)
         return response.Response(serializer.data,status=status.HTTP_200_OK)
 

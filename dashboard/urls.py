@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 dashboard = DefaultRouter()
 from django.urls import path,include
 
-from .views import DriverViewset,ClientViewSet,OrderViewSet,BalanceViewSet,PaymentViewSet,CarBrendViewSet,ColorViewSet,AdminLoginViewSet
+from .views import DriverViewset,ClientViewSet,OrderViewSet,BalanceViewSet,PaymentViewSet,CarBrendViewSet,ColorViewSet,AdminLoginViewSet,AdminChatViewSet,MessageViewSet
 from category.views import CarSeriviceView
 
 dashboard.register(r'login', AdminLoginViewSet, basename='login')
@@ -14,6 +14,8 @@ dashboard.register(r'balance', BalanceViewSet, basename='balance')
 dashboard.register(r'payment', PaymentViewSet, basename='payment')
 dashboard.register(r'car-barnd', CarBrendViewSet, basename='car-barnd')
 dashboard.register(r'color', ColorViewSet, basename='color')
+dashboard.register(r'admin-chat', AdminChatViewSet, basename='admin-chat')
+dashboard.register(r'admin-message', MessageViewSet, basename='admin-message')
 
 
 urlpatterns = [

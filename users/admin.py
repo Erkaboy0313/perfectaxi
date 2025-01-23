@@ -2,7 +2,10 @@ from django.contrib import admin
 from .models import User,Driver,Client,Admin,DocumentImages,DriverAvailableService
 # Register your models here.    
 
-admin.site.register(User)
+@admin.register(User)
+class UserAdmin(admin.ModelAdmin):
+    list_display = ("first_name",'last_name','phone','role')
+
 admin.site.register(Driver)
 admin.site.register(Admin)
 admin.site.register(Client)

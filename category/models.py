@@ -44,3 +44,10 @@ class Color(models.Model):
 
     def __str__(self):
         return self.name
+
+class CarModel(models.Model):
+    brend = models.ForeignKey(CarBrend,on_delete=models.CASCADE,blank=True,null=True)
+    name = models.CharField(max_length=100,blank=True, null=True)
+
+    def __str__(self):
+        return self.name

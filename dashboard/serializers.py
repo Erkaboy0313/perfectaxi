@@ -5,7 +5,27 @@ from PerfectTaxi.exceptions import BaseAPIException
 from order.models import Order,RejectReason,Services
 from category.models import CarService
 from payment.models import Balance,Payment
+from .models import AdminChatRoom,Message
 
+class AdminChatRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AdminChatRoom
+        fields = ['id','title','closed']
+        read_only_fields = ('closed',)
+        
+class MessageUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id','first_name','last_name']      
+
+
+class MessageSerializer(serializers.ModelSerializer):
+    author = MessageUserSerializer(read_only = True)
+    
+    class Meta:
+        model = Message
+        fields = '__all__'
+    
 
 class RejectReasonSerialzier(serializers.ModelSerializer):
     class Meta:

@@ -1,10 +1,9 @@
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
-from django.conf import settings
 from PerfectTaxi.exceptions import BaseAPIException
 from .models import User,Driver,Client,Code,DocumentImages,DriverAvailableService
-from feedback.tasks import populate_mark
 from category.models import CarService
+from category.serializers import CarBrendSerializer,CarModelSerializer,ColorSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,23 +21,18 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         username = f"{validated_data['role']}_{validated_data['phone']}"
         validated_data['username'] = username
-        base_user,created = User.objects.get_or_create(**validated_data)
-        if created:
-            if base_user.role == base_user.UserRole.DRIVER:
-                user = Driver.objects.create(user = base_user)
-            elif base_user.role == base_user.UserRole.CLIENT:
-                user = Client.objects.create(user = base_user)
-                base_user.is_verified = True
-                base_user.save()
-        else:
-            if base_user.role == base_user.UserRole.DRIVER:
-                user = Driver.objects.get(user = base_user)
-            elif base_user.role == base_user.UserRole.CLIENT:
-                user = Client.objects.get(user = base_user)
-
-        code,created = Code.objects.get_or_create(user=base_user)
+        base_user,user_created = User.objects.get_or_create(**validated_data)
         
-        if not created:
+        if base_user.role == base_user.UserRole.DRIVER:
+            user,client_created = Driver.objects.get_or_create(user = base_user)
+        elif base_user.role == base_user.UserRole.CLIENT:
+            user,client_created = Client.objects.get_or_create(user = base_user)
+            base_user.is_verified = True
+            base_user.save()
+    
+        code,code_created = Code.objects.get_or_create(user=base_user)
+        
+        if not code_created:
             code.save()
 
         # ---------- Send Verification code ------------#
@@ -131,6 +125,9 @@ class DriverSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only = True)
     last_name = serializers.CharField(write_only = True)
     user = UserSerializer()
+    car_model = CarBrendSerializer(read_only = True)
+    car_name = CarModelSerializer(read_only = True)
+    car_color = ColorSerializer(read_only = True)
     
     class Meta:
         model = Driver
@@ -139,7 +136,6 @@ class DriverSerializer(serializers.ModelSerializer):
             'status': {'read_only': True},
             'user': {'read_only': True}
             }
-        depth = 1
 
     
     def save(self, **kwargs):

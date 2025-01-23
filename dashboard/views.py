@@ -1,7 +1,7 @@
 from rest_framework.viewsets import ModelViewSet,ViewSet
-from .serializers import DriverRegisterSerializer,ClientSerializer,OrderDetailSerializer,StatisticsSeriarlizer,BalanceSerializer,PaymentSeriazer
+from .serializers import DriverRegisterSerializer,ClientSerializer,OrderDetailSerializer,StatisticsSeriarlizer,BalanceSerializer,PaymentSeriazer,AdminChatRoomSerializer,MessageSerializer
 from users.models import Driver,Client
-from users.permissions import IsAdmin
+from users.permissions import IsAdmin,IsActive
 from order.models import Order
 from rest_framework.decorators import action
 from django.db.models import Count
@@ -14,6 +14,7 @@ from rest_framework.authtoken.models import Token
 from users.models import User
 from django.contrib.auth import authenticate
 from PerfectTaxi.exceptions import BaseAPIException
+from .models import AdminChatRoom,Message
 
 
 class AdminLoginViewSet(ViewSet):
@@ -139,3 +140,56 @@ class ColorViewSet(ModelViewSet):
     serializer_class = ColorSerializer
     # permission_classes = (IsAdmin,)
 
+
+class AdminChatViewSet(ModelViewSet): 
+    serializer_class = AdminChatRoomSerializer
+    permission_classes = (IsActive,)
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return AdminChatRoom.objects.prefetch_related('users')  
+        else:
+            return AdminChatRoom.objects.filter(users=user).prefetch_related('users')
+
+    def retrieve(self, request, *args, **kwargs):
+
+        isntance = self.get_object()
+        
+        if request.user.is_admin() and request.user not in isntance.users.all():
+            isntance.users.add(self.request.user)
+            isntance.save()
+            
+        if not isntance.users.filter(id=self.request.user.id).exists():
+            return Response(
+                {"detail": "You are not a participant of this room."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        messages = Message.objects.filter(room = isntance)
+        serializer = MessageSerializer(messages,many=True)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+        
+    def perform_create(self, serializer):
+        # Create a new chat room and add the authenticated user to it
+        chat_room = serializer.save()
+        chat_room.users.add(self.request.user)
+        chat_room.save()
+        
+class MessageViewSet(ModelViewSet):
+    queryset = Message.objects.select_related('room', 'author')
+    serializer_class = MessageSerializer
+    permission_classes = (IsActive,)
+
+    def perform_create(self, serializer):
+
+        user = self.request.user
+        chat_room = serializer.validated_data.get('room')
+
+        if not chat_room.users.filter(id=user.id).exists():
+            return Response(
+                {"detail": "You are not a participant of this room."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        
+        serializer.save(author=user)

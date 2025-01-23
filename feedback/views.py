@@ -1,7 +1,7 @@
 from rest_framework import viewsets,response,status
 from .serializers import FeedbackSerializer,ResonSerializer,Reson
 from users.permissions import IsActive
-from users.models import Client,Driver
+from users.models import Driver
 from .tasks import calculate_mark
 from rest_framework.decorators import action
 
@@ -13,14 +13,14 @@ class FeedBackView(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         if request.user.role == 'client':
             feedback_type = 'client'
-            client = Client.objects.get(user= request.user)
-            feedback = serializer.save(client = client,type= feedback_type)
-            calculate_mark.delay(feedback.driver.id)
             
         elif request.user.role == 'driver':
             feedback_type = 'driver'
-            driver = Driver.objects.get(user= request.user)
-            feedback = serializer.save(driver = driver,type= feedback_type)
+
+        serializer.save(type= feedback_type)
+        
+        if feedback_type == 'client':
+            calculate_mark.delay(serializer.instance.order.driver.id)
             
         return response.Response(serializer.data,status=status.HTTP_200_OK)
         

@@ -54,6 +54,7 @@ class AuthViewSet(viewsets.GenericViewSet):
             driver = Driver.objects.select_related('user').get(id = driver_id)
             if not driver.user.is_verified:
                 driver.user.is_verified = True
+                driver.user.complete_profile = True
                 driver.user.save()
                 Balance.objects.create(driver = driver)
             return Response({'message':"user activated"},status=status.HTTP_200_OK)
@@ -72,6 +73,10 @@ class DriverViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.DriverSerializer
     http_method_names = ['put','patch','delate','get']
     permission_classes = (IsActive,)
+
+    def partial_update(self, request, *args, **kwargs):
+        print(request.data)
+        return super().partial_update(request, *args, **kwargs)
 
     def get_serializer(self, *args, **kwargs):
         serializer_class = self.get_serializer_class()

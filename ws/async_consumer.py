@@ -85,9 +85,15 @@ class OrderConsumer(AsyncWebsocketConsumer):
             await setClientOnlineStatus(user, False)  
 
         # Leave room group
-        await self.channel_layer.group_discard(
-            self.room_group_name, self.channel_name
-        )
+        if hasattr(self,'room_group_name'):
+            await self.channel_layer.group_discard(
+                self.room_group_name, self.channel_name
+            )
+        else:
+            await self.channel_layer.group_discard(
+                self.channel_name
+            )
+            
     
     # need to be fixed
     async def calculatePrice(self, data):

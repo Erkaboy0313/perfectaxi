@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CarService,SavedLocation,CarBrend,Color
+from .models import CarService,SavedLocation,CarBrend,Color,CarModel
 
 class CarServiceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,6 +19,11 @@ class CarBrendSerializer(serializers.ModelSerializer):
 class ColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Color
+        fields = '__all__'
+
+class CarModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CarModel
         fields = '__all__'
 
 

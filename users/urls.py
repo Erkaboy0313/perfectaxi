@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from . import views
 from category.urls import category_router
-from order.views import ServicesView,OrderHistoryView,RejectReasonView,DriverWeeklyReportView
+from order.views import ServicesView,OrderHistoryView,RejectReasonView,DriverWeeklyReportView,LastDestinationsViewSet
 from creditCard.views import CardView
 from payment.views import ChangePaymentMethodView,BalanceView
 from feedback.views import FeedBackView,ReasonView
@@ -23,6 +23,7 @@ router.register(r'feedback',FeedBackView, basename='feedback')
 router.register(r'reason',ReasonView, basename='reason')
 router.register(r'reject-reason',RejectReasonView, basename='reject-reason')
 router.register(r'weekly-report',DriverWeeklyReportView, basename='weekly-report')
+router.register(r'last-point',LastDestinationsViewSet, basename='last-point')
 
 urlpatterns = [
     path('', include(router.urls)),

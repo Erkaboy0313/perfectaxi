@@ -69,7 +69,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send_to_admin(data)
         return await self.send(text_data=json.dumps({"message":{"action":"send","status":True}}))
 
-
     async def contact_admin(self,data):
         user = self.scope['user']
         chat = await Room.aobjects.get_chat_with_admin(user)
