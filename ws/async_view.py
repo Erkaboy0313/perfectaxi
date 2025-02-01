@@ -13,14 +13,14 @@ import asyncio,functools
 import json
 
 # Create new order (Client)
-async def createOrder(user, data):
+async def createOrder(user, data, extra_data):
     # Get the client object associated with the user
     client = await Client.objects.aget(user=user)  # Assuming Client.objects.get is async
 
     # Validate and serialize the order data
     serializer = OrderCreateSeriazer(data=data)
     await asyncio.to_thread(functools.partial(serializer.is_valid,raise_exception=True))
-    data = await asyncio.to_thread(functools.partial(serializer.save,client=client))
+    data = await asyncio.to_thread(functools.partial(serializer.save,client=client,price = extra_data['cost'],distance = extra_data['distance']))
     
     order = await Order.objects.select_related('carservice').aget(id = data.id)
     

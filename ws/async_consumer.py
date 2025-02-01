@@ -14,7 +14,7 @@ from .async_view import createOrder,lastOrderClient,lastOrderDriver,lastOrderDri
 
 from .tasks import sendOrderTodriverTask
 
-from .async_serializer import costSerializer,orderToDriverSerializer
+from .async_serializer import orderToDriverSerializer
 import json
 
 
@@ -94,8 +94,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             
-    
-    # need to be fixed
+
     async def calculatePrice(self, data):
         lat = data.get('latitude')
         long = data.get('longitude')
@@ -105,15 +104,21 @@ class OrderConsumer(AsyncWebsocketConsumer):
         service = data.get('service', [])
         distance,time = await FindRoute().find_drive(start, points)  # Assuming find_drive is async
         costs = await CarService.filter.calculatePrice(distance=distance,time=time,service_list=service)  # Assuming calculatePrice is async
-        serialized_data = await costSerializer(costs)
-        return await self.send_price(serialized_data)  # Assuming send_price is async
+        extra_data = [cost for cost in costs if cost['id'] == data['carservice']]
+        print(extra_data)
+        return extra_data[0] if extra_data else 0
 
     async def newOrder(self, data):
         user = self.scope['user']
         await cancelTask(f'sendtaskclient_{user.id}')  # Assuming cancelTask is async
-
         strat_point = f"{data['latitude']},{data['longitude']}"
-        order, order_obj = await createOrder(user, data)  # Assuming createOrder is async
+        
+        extra_data = await self.calculatePrice(data)
+        
+        if not extra_data:
+            return self.send_error("can't calculate price for this order something went wrong, try again")
+        
+        order, order_obj = await createOrder(user, data, extra_data)  # Assuming createOrder is async
 
         sendOrderTodriverTask.delay(f"order_{order_obj.id}", strat_point, order_obj.carservice.service)
         

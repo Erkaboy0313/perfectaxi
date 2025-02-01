@@ -1,29 +1,5 @@
 from order.models import Point
 
-async def costSerializer(data):
-    async def roundPrice(price):
-        rounded_hundreds = int(price / 100) % 10  # Extract the hundreds part and round it
-        if rounded_hundreds >= 7:
-            rounded_price = int(price / 1000) * 1000 + 1000
-        elif rounded_hundreds >= 3:
-            rounded_price = int(price / 1000) * 1000 + 500
-        else:
-            rounded_price = int(price / 1000) * 1000
-        return rounded_price
-    
-    cost_list = []
-    for cost in data:
-        obj = {
-            'id':cost['id'],
-            'service':cost['service'],
-            'cost':await roundPrice(cost['cost']),
-            'travel_time':cost['travel_time'],
-            'distance':cost['distance'],
-        }
-        cost_list.append(obj)
-
-    return cost_list
-
 async def point(x):
     return {
         "point_number":x.point_number,

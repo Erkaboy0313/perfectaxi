@@ -6,6 +6,7 @@ from order.views import ServicesView,OrderHistoryView,RejectReasonView,DriverWee
 from creditCard.views import CardView
 from payment.views import ChangePaymentMethodView,BalanceView
 from feedback.views import FeedBackView,ReasonView
+from ws.views import CalculatePrice
 
 app_name = 'users'
 router = DefaultRouter()
@@ -26,6 +27,7 @@ router.register(r'weekly-report',DriverWeeklyReportView, basename='weekly-report
 router.register(r'last-point',LastDestinationsViewSet, basename='last-point')
 
 urlpatterns = [
+    path('calculate-price/', CalculatePrice.as_view(), name='calculate-price'),
     path('', include(router.urls)),
     path('', include(category_router.urls)),
 ]
