@@ -118,6 +118,32 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
         model = DocumentImages
         fields = ['image']
 
+
+class DriverProfileSerialzer(serializers.ModelSerializer):
+    car_images = DocumentImagesSerializer(many = True)
+    car_tex_passport_images = DocumentImagesSerializer(many = True)
+    license_images = DocumentImagesSerializer(many = True)
+    car_model = CarBrendSerializer()
+    car_name = CarModelSerializer()
+    car_color = ColorSerializer()
+    user = UserSerializer()
+    
+    class Meta:
+        model = Driver
+        fields = '__all__'
+    
+    def to_representation(self, instance):
+
+        obj = super().to_representation(instance)
+        
+        for key,value in obj['user'].items():
+            obj[key] = value
+        
+        del obj['user']
+        return obj
+
+
+
 class DriverSerializer(serializers.ModelSerializer):
     car_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     car_tex_passport_images = serializers.ListField(child = serializers.FileField(),write_only = True)
@@ -170,16 +196,10 @@ class DriverSerializer(serializers.ModelSerializer):
             for image in license_images:
                 img = DocumentImages.objects.create(image = image)
                 obj.license_images.add(img)
-
+                
     def to_representation(self, instance):
+        return {"message":"user updated"}
 
-        obj = super().to_representation(instance)
-        
-        for key,value in obj['user'].items():
-            obj[key] = value
-        
-        del obj['user']
-        return obj
 
 class ClientSerializer(serializers.ModelSerializer):
     user = UserSerializer()

@@ -74,10 +74,6 @@ class DriverViewSet(viewsets.ModelViewSet):
     http_method_names = ['put','patch','delate','get']
     permission_classes = (IsActive,)
 
-    def partial_update(self, request, *args, **kwargs):
-        print(request.data)
-        return super().partial_update(request, *args, **kwargs)
-
     def get_serializer(self, *args, **kwargs):
         serializer_class = self.get_serializer_class()
         kwargs['context'] = self.get_serializer_context()
@@ -88,7 +84,7 @@ class DriverViewSet(viewsets.ModelViewSet):
             return super().list(request, *args, **kwargs)
         else:
             driver = Driver.objects.select_related("user").get(user = request.user)
-            serializer = self.get_serializer(driver)
+            serializer = serializers.DriverProfileSerialzer(driver,context={'request': request})
             return Response(serializer.data)
 
 class ClientViewSet(viewsets.ModelViewSet):
