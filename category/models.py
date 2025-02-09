@@ -15,6 +15,7 @@ class CarService(models.Model):
     price_per_min = models.FloatField(default = 0)
     wait_price_per_min = models.FloatField(default = 0)
     free_wait_time = models.IntegerField(default = 0)
+    icon = models.FileField(upload_to="CategoryIcons/",blank=True,null=True)
     
 
     objects = models.Manager()
