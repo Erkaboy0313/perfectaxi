@@ -151,9 +151,6 @@ class DriverSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only = True)
     last_name = serializers.CharField(write_only = True)
     user = UserSerializer()
-    car_model = CarBrendSerializer(read_only = True)
-    car_name = CarModelSerializer(read_only = True)
-    car_color = ColorSerializer(read_only = True)
     
     class Meta:
         model = Driver
