@@ -1,5 +1,7 @@
 from rest_framework.viewsets import ModelViewSet,ViewSet
-from .serializers import DriverRegisterSerializer,ClientSerializer,OrderDetailSerializer,StatisticsSeriarlizer,BalanceSerializer,PaymentSeriazer,AdminChatRoomSerializer,MessageSerializer
+from .serializers import DriverRegisterSerializer,ClientSerializer,OrderDetailSerializer,\
+    StatisticsSeriarlizer,BalanceSerializer,PaymentSeriazer,AdminChatRoomSerializer,MessageSerializer,\
+        DriverUploadImageSerializer,DriverServiceSerializer,CarServiceSerializer
 from users.models import Driver,Client
 from users.permissions import IsAdmin,IsActive
 from order.models import Order
@@ -8,10 +10,10 @@ from django.db.models import Count
 from rest_framework.response import Response
 from rest_framework import status
 from payment.models import Balance,Payment
-from category.models import CarBrend,Color
-from category.serializers import CarBrendSerializer,ColorSerializer
+from category.models import CarBrend,Color,CarModel
+from category.serializers import CarBrendSerializer,ColorSerializer,CarModelSerializer
 from rest_framework.authtoken.models import Token
-from users.models import User
+from users.models import User,DriverAvailableService
 from django.contrib.auth import authenticate
 from PerfectTaxi.exceptions import BaseAPIException
 from .models import AdminChatRoom,Message
@@ -35,29 +37,68 @@ class DriverViewset(ModelViewSet):
     # permission_classes = (IsAdmin,)
     
     def create(self, request, *args, **kwargs):
-        print(request.data)
-        return super().create(request, *args, **kwargs)
+
+        serializer = DriverRegisterSerializer(data = request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.save()
+        return Response(data)
+        
+    def get_serializer_context(self):
+        return {'request': self.request}
+        
+    @action(methods=['POST'], detail=True)
+    def upload_photos(self, request, *args, **kwargs):
+        driver_id = kwargs.get('pk')
+        driver = Driver.objects.get(id=driver_id)
+        serializer = DriverUploadImageSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        saved_images = serializer.save(driver=driver)
+
+        return Response({"success": True, "saved_images": saved_images})
 
     @action(methods=['POST'],detail=True)
     def verify_driver(self,request,*args,**kwargs):
         driver_id = kwargs.get('pk')
         driver = Driver.objects.get(id = driver_id)
-        driver.user.is_verified = True
+        driver.user.is_verified = not driver.user.is_verified
         driver.user.save()
-
+        return Response({"success": True})
+        
     @action(methods=['POST'],detail=True)
     def unblock_driver(self,request,*args,**kwargs):
         driver_id = kwargs.get('pk')
         driver = Driver.objects.get(id = driver_id)
         driver.user.is_block = False
+        driver.user.reason = None
         driver.user.save()
-
+        return Response({"success": True})
+    
     @action(methods=['POST'],detail=True)
     def block_driver(self,request,*args,**kwargs):
         driver_id = kwargs.get('pk')
+        reason = request.data.get("reason",None)
         driver = Driver.objects.get(id = driver_id)
         driver.user.is_block = True
+        driver.user.reason = reason
         driver.user.save()
+        return Response({"success": True})
+
+    @action(methods=['POST'],detail=True)
+    def add_service(self,request,*args,**kwargs):
+        driver_id = kwargs.get('pk')
+        service_list = request.data.get("service_list",[])
+        
+        DriverAvailableService.objects.filter(driver__id = driver_id).exclude(service__id__in = service_list).delete()
+        
+        for s_id in service_list:
+            serializer = DriverServiceSerializer(data = {'driver':driver_id,'service':s_id})
+            try:
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            except:
+                pass
+        return Response({"success": True})
+        
 
 class ClientViewSet(ModelViewSet):
     queryset = Client.objects.select_related('user')
@@ -135,11 +176,15 @@ class CarBrendViewSet(ModelViewSet):
     serializer_class = CarBrendSerializer
     # permission_classes = (IsAdmin,)
 
+class CarModelViewSet(ModelViewSet):
+    queryset = CarModel.objects.all()
+    serializer_class = CarModelSerializer
+    # permission_classes = (IsAdmin,)
+
 class ColorViewSet(ModelViewSet):
     queryset = Color.objects.all()
     serializer_class = ColorSerializer
     # permission_classes = (IsAdmin,)
-
 
 class AdminChatViewSet(ModelViewSet): 
     serializer_class = AdminChatRoomSerializer

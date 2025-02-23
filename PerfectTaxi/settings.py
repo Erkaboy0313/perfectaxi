@@ -24,7 +24,10 @@ DEBUG = int(os.environ.get('DEBUG',1))
 
 # ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS','127.0.0.1 localhost').split(' ')
 ALLOWED_HOSTS = ['*']
-CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://192.168.1.2:8000",
+]
 
 HOST ='http://127.0.0.1:8000' if DEBUG else 'https://api.perfecttaxi.uz'
     
@@ -52,7 +55,9 @@ INSTALLED_APPS = [
     'django_celery_results',
     "django_celery_beat",
     'corsheaders',
-    'dashboard'
+    'dashboard',
+    'parler',
+    'client_site'
 ]
 
 MIDDLEWARE = [
@@ -103,12 +108,12 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.environ.get('REDIS_HOST1',"127.0.0.1"), 6379)],
+            "hosts": [(os.environ.get('REDIS_HOST',"127.0.0.1"), 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST1","127.0.0.1")}:6379/0'
+CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST","127.0.0.1")}:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
@@ -121,36 +126,36 @@ CORS_ALLOW_CREDENTIALS = True
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ.get('REDIS_HOST1','127.0.0.1')}:6379/1",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOST','127.0.0.1')}:6379/1",
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         "KEY_PREFIX": "PTaxi",
     }
 }
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
-    #     'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
-    #     'USER': os.environ.get("SQL_USER", "eric"),
-    #     'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
-    #     'HOST': os.environ.get("SQL_HOST", "localhost"),
-    #     'PORT': os.environ.get("SQL_PORT", "5432"),
-    # }
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'taxi',
-        'USER': 'taxiadmin',
-        'PASSWORD': 'taxiadmin',
-        'HOST': 'localhost',
-        'PORT': '',
+        'ENGINE': os.environ.get("SQL_ENGINE", "django.db.backends.postgresql"),
+        'NAME': os.environ.get("SQL_DATABASE", "ptaxi"),
+        'USER': os.environ.get("SQL_USER", "eric"),
+        'PASSWORD': os.environ.get("SQL_PASSWORD", "nevergiveup3"),
+        'HOST': os.environ.get("SQL_HOST", "localhost"),
+        'PORT': os.environ.get("SQL_PORT", "5432"),
     }
+    # 'default': {
+    #     'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    #     'NAME': 'taxi',
+    #     'USER': 'taxiadmin',
+    #     'PASSWORD': 'taxiadmin',
+    #     'HOST': 'localhost',
+    #     'PORT': '',
+    # }
     # 'default': {
     #     'ENGINE': 'django.db.backends.sqlite3',
     #     'NAME': BASE_DIR / 'db.sqlite3',
     # }
 }
 
-if DEBUG:
+if not DEBUG:
     LOGGING = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -219,7 +224,21 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'Asia/Tashkent'
 
+PARLER_LANGUAGES = {
+    None: (
+        {'code': 'en',},
+        {'code': 'ru',},
+        {'code': 'uz',},
+    ),
+    'default': {
+        'fallbacks': ['en'],
+        'hide_untranslated': False,   # Default
+    }
+}
+
+
 USE_I18N = True
+USE_L10N = True
 
 USE_TZ = True
 

@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from PerfectTaxi.exceptions import BaseAPIException
 from .models import User,Driver,Client,Code,DocumentImages,DriverAvailableService
+from rest_framework.validators import UniqueTogetherValidator
 from category.models import CarService
 from category.serializers import CarBrendSerializer,CarModelSerializer,ColorSerializer
 
@@ -118,7 +119,6 @@ class DocumentImagesSerializer(serializers.ModelSerializer):
         model = DocumentImages
         fields = ['image']
 
-
 class DriverProfileSerialzer(serializers.ModelSerializer):
     car_images = DocumentImagesSerializer(many = True)
     car_tex_passport_images = DocumentImagesSerializer(many = True)
@@ -141,8 +141,6 @@ class DriverProfileSerialzer(serializers.ModelSerializer):
         
         del obj['user']
         return obj
-
-
 
 class DriverSerializer(serializers.ModelSerializer):
     car_images = serializers.ListField(child = serializers.FileField(),write_only = True)
@@ -197,7 +195,6 @@ class DriverSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         return {"message":"user updated"}
 
-
 class ClientSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     class Meta:
@@ -228,7 +225,19 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = ['id','service']
 
 class DriverServiceSerializer(serializers.ModelSerializer):
-    service = ServiceSerializer(read_only = True)
+    
     class Meta:
         model = DriverAvailableService
-        fields = ["id","service","on"]
+        fields = ["id","driver","service","on"]
+        validators = [
+            UniqueTogetherValidator(
+                queryset=DriverAvailableService.objects.all(),
+                fields=['driver', 'service'],
+                message="This service is already added for this driver."
+            )
+        ]
+        
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['service'] = ServiceSerializer(instance.service).data
+        return data
