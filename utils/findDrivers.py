@@ -58,7 +58,7 @@ def findAvailableDrivers(location,radius,order_id,service):
     #Find nearest drivers
     long,lat = tuple(map(float,location.split(',')))
     drivers = find_nearest_drivers(lat,long,radius,10)
-    Log.objects.create(f'{order_id} uchun driver qidirish oxirgi qadam qora royxat: {black_list}: Topilgan driverlar {drivers}')
+    Log.objects.create(text = f'{order_id} drrr: {black_list}: Topilgan driverlar {drivers[0]}')
     #Filter by black list
     if black_list:
         drivers = filter(lambda x: not int(x[0]) in black_list,drivers)

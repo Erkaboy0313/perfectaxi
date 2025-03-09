@@ -8,7 +8,7 @@ from users.models import Client
 class CarSeriviceView(viewsets.ModelViewSet):
     queryset = CarService.objects.all()
     serializer_class = CarServiceSerializer
-    http_method_names = ['get','post','put']
+    http_method_names = ['get','post','put','delete']
 
     def get_permissions(self):
         if self.action == 'list' or self.action == 'retrieve':
