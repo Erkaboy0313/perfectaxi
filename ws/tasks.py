@@ -98,7 +98,7 @@ def find_drivers_to_order(order,location,service,order_time_str):
     extra_data = sgetKey(f'order_extra_info_{order_id}')
     Log.objects.create(text = f'{order_id} uchun driver qidirish taski')
     
-    Log.objects.create(text = f'{order_id} uchun status {extra_data['status']}')
+    Log.objects.create(text = f"{order_id} uchun status {extra_data['status']}")
     if not extra_data['status'] == Order.OrderStatus.ACTIVE:
         Log.objects.create(text = f'{order_id} bye bye')
         return
