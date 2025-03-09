@@ -9,7 +9,7 @@ else:
     client_site = routers.SimpleRouter()
 
 client_site.register(r'applink',AppLinksView,basename='applink')
-client_site.register(r'service',ServiceView,basename='service')
+client_site.register(r'service',ServiceView,basename='client-service')
 client_site.register(r'price',PricingView,basename='price')
 client_site.register(r'statistics',StatisticView,basename='statistics')
 client_site.register(r'review',ReviewView,basename='review')

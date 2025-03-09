@@ -2,7 +2,7 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from category.models import CarService
 from users.models import Driver
 from order.models import DriverOrderHistory,Order
-
+from category.models import Log
 from utils.cordinates import FindRoute
 
 from utils.cache_functions import setKey,getKey,removeKey
@@ -91,7 +91,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
             )
         else:
             await self.channel_layer.group_discard(
-                self.channel_name
+                "default",self.channel_name
             )
             
 
@@ -118,8 +118,10 @@ class OrderConsumer(AsyncWebsocketConsumer):
         if not extra_data:
             return self.send_error("can't calculate price for this order something went wrong, try again")
         
+        
         order, order_obj = await createOrder(user, data, extra_data)  # Assuming createOrder is async
 
+        Log.objects.create(f'{order_obj.id} uchun driver qidira boshlandi')
         sendOrderTodriverTask.delay(f"order_{order_obj.id}", strat_point, order_obj.carservice.service)
         
         return await self.send_order(order)  # Assuming send_order is async

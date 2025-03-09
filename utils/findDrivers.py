@@ -2,6 +2,7 @@ from utils.cordinates import find_nearest_drivers,FindRoute
 from utils.cache_functions import sgetKey
 from users.models import Driver
 import asyncio
+from category.models import Log
 
 def serializeCloseDriver(drivers_list,service):
     drivers = []
@@ -54,10 +55,10 @@ def findCloseDriver(location = None,radius:int = 1000,service:str = 'standart'):
 def findAvailableDrivers(location,radius,order_id,service):
     black_list = sgetKey(f"black_list_{order_id}")
     black_list = black_list if black_list else []
-    
     #Find nearest drivers
     long,lat = tuple(map(float,location.split(',')))
     drivers = find_nearest_drivers(lat,long,radius,10)
+    Log.objects.create(f'{order_id} uchun driver qidirish oxirgi qadam qora royxat: {black_list}: Topilgan driverlar {drivers}')
     #Filter by black list
     if black_list:
         drivers = filter(lambda x: not int(x[0]) in black_list,drivers)

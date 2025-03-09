@@ -12,7 +12,7 @@ from utils.cordinates import remove_location
 from .models import SearchRadius
 import time,pytz
 from datetime import datetime,timedelta
-
+from category.models import Log
 
 tz = pytz.timezone("UTC")
 
@@ -96,7 +96,7 @@ def find_drivers_to_order(order,location,service,order_time_str):
     order_time = tz.localize(order_time)
     
     extra_data = sgetKey(f'order_extra_info_{order_id}')
-    
+    Log.objects.create(f'{active_order.id} uchun driver qidirish taski')
     if not extra_data['status'] == Order.OrderStatus.ACTIVE:
         return
 
@@ -139,7 +139,7 @@ def sendOrderTodriverTask(order, location, service):
     
     if active_order.exists():
         drivers = sgetKey(order)
-        
+        Log.objects.create(f'{active_order.id} uchun driver qidirish taski')
         if not drivers:
             order_time = active_order.last().ordered_time
             order_time_str = order_time.strftime('%Y-%m-%d %H:%M:%S')
