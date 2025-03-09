@@ -124,11 +124,16 @@ def find_drivers_to_order(order,location,service,order_time_str):
     
     while radiuses:
         Log.objects.create(text = f"{order_id} uchun status {radiuses}")
-        drivers = findAvailableDrivers(location=location,radius=radiuses.pop(0),order_id=order_id,service=service)
+        try:
+            
+            drivers = findAvailableDrivers(location=location,radius=radiuses.pop(0),order_id=order_id,service=service)
 
-        if drivers:
-            ssetKey(order,drivers)
-            return sendOrderTodriverTask.delay(order,location,service)
+            if drivers:
+                ssetKey(order,drivers)
+                return sendOrderTodriverTask.delay(order,location,service)
+        except Exception as e:
+            Log.objects.create(text = f"{order_id} uchun errro {e}")
+            
     else:
         time.sleep(5)
         return find_drivers_to_order(order,location,service,order_time_str)
