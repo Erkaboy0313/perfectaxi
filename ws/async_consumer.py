@@ -121,7 +121,7 @@ class OrderConsumer(AsyncWebsocketConsumer):
         
         order, order_obj = await createOrder(user, data, extra_data)  # Assuming createOrder is async
 
-        await Log.objects.acreate(f'{order_obj.id} uchun driver qidira boshlandi')
+        await Log.objects.acreate(text = f'{order_obj.id} uchun driver qidira boshlandi')
         sendOrderTodriverTask.delay(f"order_{order_obj.id}", strat_point, order_obj.carservice.service)
         
         return await self.send_order(order)  # Assuming send_order is async
