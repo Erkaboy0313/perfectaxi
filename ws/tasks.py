@@ -123,7 +123,7 @@ def find_drivers_to_order(order,location,service,order_time_str):
     radiuses = [radius.radius1,radius.radius2,radius.radius3,radius.radius4]
     
     while radiuses:
-
+        Log.objects.create(text = f"{order_id} uchun status {radiuses}")
         drivers = findAvailableDrivers(location=location,radius=radiuses.pop(0),order_id=order_id,service=service)
 
         if drivers:
