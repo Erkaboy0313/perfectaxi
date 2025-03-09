@@ -175,6 +175,13 @@ class CarBrendViewSet(ModelViewSet):
     queryset = CarBrend.objects.all()
     serializer_class = CarBrendSerializer
     # permission_classes = (IsAdmin,)
+    
+    def retrieve(self, request, *args, **kwargs):
+        pk = kwargs['pk']
+        
+        car_models = CarModel.objects.filter(brend__id = pk)
+        serializer = CarModelSerializer(car_models,many = True)
+        return Response(serializer.data)
 
 class CarModelViewSet(ModelViewSet):
     queryset = CarModel.objects.all()
