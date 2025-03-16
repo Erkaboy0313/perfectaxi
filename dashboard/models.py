@@ -9,6 +9,10 @@ class AdminChatRoom(models.Model):
 
     objects = models.Manager()
     
+    @property
+    def user_phone(self):
+        return self.users.filter(role = "driver").first().phone
+    
     def __str__(self) -> str:
         return self.name        
     

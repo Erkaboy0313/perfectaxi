@@ -11,15 +11,21 @@ from users.serializers import DriverServiceSerializer
 from category.serializers import CarModelSerializer,ColorSerializer,CarBrendSerializer
 
 class AdminChatRoomSerializer(serializers.ModelSerializer):
+    user_phone = serializers.ReadOnlyField()
     class Meta:
         model = AdminChatRoom
-        fields = ['id','title','closed']
+        fields = ['id','title','closed','user_phone']
         read_only_fields = ('closed',)
         
 class MessageUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id','first_name','last_name']      
+        fields = ['id','first_name','last_name']
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['is_admin'] = instance.is_admin
+        return data 
 
 class MessageSerializer(serializers.ModelSerializer):
     author = MessageUserSerializer(read_only = True)
