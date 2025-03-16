@@ -24,7 +24,7 @@ class MessageUserSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        data['is_admin'] = instance.is_admin
+        data['is_admin'] = instance.is_admin()
         return data 
 
 class MessageSerializer(serializers.ModelSerializer):
