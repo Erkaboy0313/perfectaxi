@@ -11,10 +11,17 @@ class AdminChatRoom(models.Model):
     
     @property
     def user_phone(self):
-        return self.users.filter(role = "driver").first().phone
+        driver = self.users.filter(role = "driver").first()
+        if driver:
+            return driver.phone
+        else:
+            return ''
     
     def __str__(self) -> str:
-        return self.name        
+        return self.name
+    
+    class Meta:
+        ordering = ['closed']
     
 class Message(models.Model):
     author = models.ForeignKey('users.User',on_delete=models.CASCADE,related_name='admin_messages')
