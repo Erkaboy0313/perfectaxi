@@ -99,7 +99,6 @@ class DriverViewset(ModelViewSet):
                 pass
         return Response({"success": True})
         
-
 class ClientViewSet(ModelViewSet):
     queryset = Client.objects.select_related('user')
     serializer_class = ClientSerializer
@@ -227,7 +226,15 @@ class AdminChatViewSet(ModelViewSet):
         chat_room = serializer.save()
         chat_room.users.add(self.request.user)
         chat_room.save()
-        
+    
+    @action(methods=['post'],detail=False)
+    def close(self,request):
+        chat_id = request.data.get("chat_id",None)
+        chat = AdminChatRoom.objects.get(id = chat_id)
+        chat.closed = True
+        chat.save()
+        return Response({"message":"chat deleted"})
+    
 class MessageViewSet(ModelViewSet):
     queryset = Message.objects.select_related('room', 'author')
     serializer_class = MessageSerializer
