@@ -233,7 +233,7 @@ class AdminChatViewSet(ModelViewSet):
         chat = AdminChatRoom.objects.get(id = chat_id)
         chat.closed = True
         chat.save()
-        return Response({"message":"chat deleted"})
+        return Response({"message":"chat closed"})
     
 class MessageViewSet(ModelViewSet):
     queryset = Message.objects.select_related('room', 'author')

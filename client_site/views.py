@@ -1,6 +1,6 @@
 from rest_framework.viewsets import ModelViewSet,ViewSet
-from .models import AppLinks,Service,Pricing,Statistic,Review,DriverRequest
-from .serializers import PricingSerializer,StatisticSerializer,ServiceSerializer,AppLinksSeriazer,ReviewSeriazer,DriverRequestSeriazer
+from .models import AppLinks,Service,Pricing,Statistic,Review,DriverRequest,ContactUs
+from .serializers import PricingSerializer,StatisticSerializer,ServiceSerializer,AppLinksSeriazer,ReviewSeriazer,DriverRequestSeriazer,ContactUsSerializer
 
 
 
@@ -32,4 +32,9 @@ class ReviewView(ModelViewSet):
 class DriverRequestView(ModelViewSet):
     queryset  = DriverRequest.objects.all()
     serializer_class = DriverRequestSeriazer
+    http_method_names = ['get',"post"]
+
+class ContactUsRequestView(ModelViewSet):
+    queryset  = ContactUs.objects.all()
+    serializer_class = ContactUsSerializer
     http_method_names = ['get',"post"]

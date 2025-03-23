@@ -13,8 +13,8 @@ class AppLinks(models.Model):
 class Service(TranslatableModel):
     translations = TranslatedFields(
         name = models.CharField(max_length=100),
-        title = models.CharField(max_length=255),
-        text = models.CharField(max_length=255)
+        title = models.TextField(),
+        text = models.TextField()
     )
 
 
@@ -39,7 +39,18 @@ class Statistic(TranslatableModel):
 
     def __str__(self):
         return f"{self.avilable_drivers} - {self.clients}"
-    
+
+class ContactUs(TranslatableModel):
+    translations = TranslatedFields(
+        address = models.TextField()
+    )
+    phone = models.CharField(max_length=100)
+    email = models.EmailField()
+    istagram = models.URLField()
+    telegram = models.URLField()
+    facebook = models.URLField()
+    youtube = models.URLField()
+
     
 class Review(models.Model):
     name = models.CharField(max_length=100)
