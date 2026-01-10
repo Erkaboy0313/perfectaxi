@@ -84,9 +84,9 @@ class OrderHistorySerializer(serializers.ModelSerializer):
         return data
 
 class DriverOrderHistorySerializer(serializers.ModelSerializer):
-    total_time = serializers.ReadOnlyField()
-    total_price = serializers.FloatField()
-    charge_price = serializers.FloatField()
+    total_time = serializers.IntegerField(read_only=True)
+    charge_price = serializers.FloatField(read_only=True)
+    total_price = serializers.FloatField(read_only=True)
     order = OrderHistorySerializer()
     class Meta:
         model = DriverOrderHistory

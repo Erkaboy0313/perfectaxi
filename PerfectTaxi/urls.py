@@ -18,11 +18,25 @@ from django.contrib import admin
 from django.urls import path,include
 from django.conf.urls.static import static
 from django.conf import settings
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularSwaggerView,
+    SpectacularRedocView,
+)
 
 urlpatterns = [
+    
+    # Schema generation endpoint
+    path("api/schema/", SpectacularAPIView.as_view(urlconf="users.urls"), name="schema"),
+    path("api/docs/",SpectacularSwaggerView.as_view(url_name="schema"),name="swagger-ui",),
+    path("api/redoc/",SpectacularRedocView.as_view(url_name="schema"),name="redoc",),
+    
+    
+    
     path('admin/', admin.site.urls),
     path('payment/', include('payment.urls')),
-    path('api/v1/', include('users.urls', namespace='users')),
+    path('', include('users.urls', namespace='users')),
+    
     path('dashboard/', include('dashboard.urls')),
     path('site/', include('client_site.routes')),
     path('__debug__/', include('debug_toolbar.urls')),

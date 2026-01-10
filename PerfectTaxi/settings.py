@@ -57,7 +57,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'dashboard',
     'parler',
-    'client_site'
+    'client_site',
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -101,7 +102,40 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Replace with desired permissions
     ],
-    'DATETIME_FORMAT': '%d-%m-%Y %H:%M:%S'
+    'DATETIME_FORMAT': '%d-%m-%Y %H:%M:%S',
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PerfectTaxi API",
+    "DESCRIPTION": "API documentation",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+
+    # "ENUM_NAME_OVERRIDES": {
+    #     "order.DriverOrderHistory.status": "DriverHistoryStatus",
+    #     "order.Order.status": "OrderStatus",
+    #     "payment.Payment.status": "PaymentStatus",
+    #     "payment.Charge.status": "ChargeStatus",
+    #     "users.Driver.status": "DriverStatus",
+    # },
+
+    # Optional but useful
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SCHEMA_PATH_PREFIX": r"/api/v1/",
+    
+    "SECURITY": [{"tokenAuth": []}],
+    "COMPONENTS": {
+        "securitySchemes": {
+            "tokenAuth": {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Authorization",
+                "description": "Token-based auth. Format: `Token <your_token>`",
+            }
+        }
+    },
+    
 }
 
 CHANNEL_LAYERS = {

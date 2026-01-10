@@ -3,7 +3,7 @@ from rest_framework import viewsets,permissions
 from .serializers import *
 from users.permissions import IsActive
 from users.models import Client
-
+from drf_spectacular.utils import extend_schema, extend_schema_view  , OpenApiParameter, OpenApiTypes
 
 class CarSeriviceView(viewsets.ModelViewSet):
     queryset = CarService.objects.all()
@@ -39,6 +39,28 @@ class SavedLocationView(viewsets.ModelViewSet):
         client = Client.objects.get(user = self.request.user)
         serializer.save(user = client)
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List car brands",
+        operation_id="carbrand_list",
+        responses={200: CarBrendSerializer(many=True)},
+        tags=['Cars'],
+    ),
+    retrieve=extend_schema(
+        summary="List models by brand",
+        operation_id="carbrand_retrieve",
+        parameters=[
+            OpenApiParameter(
+                name='id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='Car brand ID',
+            )
+        ],
+        responses={200: CarModelSerializer(many=True)},
+        tags=['Cars'],
+    ),
+)
 class CarBrendViewSet(viewsets.ViewSet):
 
     def list(self,request):
@@ -52,6 +74,13 @@ class CarBrendViewSet(viewsets.ViewSet):
         serializer = CarModelSerializer(car_models,many=True)
         return response.Response(serializer.data,status=status.HTTP_200_OK)
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List colors",
+        description="Returns a list of all available car colors.",
+        responses={200: ColorSerializer(many=True)}
+    )
+)
 class ColorViewSet(viewsets.ViewSet):
 
     def list(self,request):
@@ -59,6 +88,13 @@ class ColorViewSet(viewsets.ViewSet):
         serializer = ColorSerializer(queryset,many=True)
         return response.Response(serializer.data,status=status.HTTP_200_OK)
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List all car models",
+        description="Returns a list of all car models regardless of brand.",
+        responses={200: CarModelSerializer(many=True)}
+    )
+)
 class CarModelViewSet(viewsets.ViewSet):
 
     def list(self,request):

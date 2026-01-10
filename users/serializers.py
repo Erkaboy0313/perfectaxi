@@ -10,6 +10,11 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name','last_name','phone','is_block','complete_profile','is_verified']
+        
+
+class ClientProfileUpdateSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=150)
+    last_name = serializers.CharField(max_length=150)
 
 class RegistrationSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=['client', 'driver'])
@@ -148,14 +153,12 @@ class DriverSerializer(serializers.ModelSerializer):
     license_images = serializers.ListField(child = serializers.FileField(),write_only = True)
     first_name = serializers.CharField(write_only = True)
     last_name = serializers.CharField(write_only = True)
-    user = UserSerializer()
     
     class Meta:
         model = Driver
         fields = '__all__'
         extra_kwargs = {
-            'status': {'read_only': True},
-            'user': {'read_only': True}
+            'status': {'read_only': True}
             }
 
     
