@@ -1,24 +1,24 @@
-from django.http import JsonResponse
-from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from django.db import transaction
 from django.utils.decorators import method_decorator
-from rest_framework import viewsets,response,status
-from users import serializers
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
+
+from utils.responses import SuccessResponseMixin, success_response
 from PerfectTaxi.exceptions import BaseAPIException
 from users.permissions import IsActive, IsAdmin, CanChangeStatus
-from PerfectTaxi.models import BaseSuccess
 from .models import Client, User, Driver, DriverAvailableService
 from payment.models import Balance
-from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view,OpenApiParameter, OpenApiTypes
+from users import serializers
 
 
 @method_decorator(transaction.non_atomic_requests, name='dispatch')
 @extend_schema_view(
     verify_number=extend_schema(
         summary="Verify phone number",
-        description="Registers or verifies a user’s phone number. Returns a user ID and message.",
+        description="Registers or verifies a user's phone number. Returns a user ID and message.",
         request=serializers.RegistrationSerializer,
         responses={200: {
             'type': 'object',
@@ -54,7 +54,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view,OpenApiParam
         responses={200: {'type': 'object', 'properties': {'success': {'type': 'boolean'}}}},
     ),
 )
-class AuthViewSet(viewsets.GenericViewSet):
+class AuthViewSet(SuccessResponseMixin, viewsets.GenericViewSet):
     queryset = User.objects.all()
 
     def get_serializer_class(self):
@@ -64,7 +64,6 @@ class AuthViewSet(viewsets.GenericViewSet):
             return serializers.TestVerifySerializer
         elif self.action == 'verify_code':
             return serializers.VerifySerializer
-        # fallback
         return serializers.RegistrationSerializer
 
     @transaction.atomic
@@ -73,14 +72,14 @@ class AuthViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.save()
-        return Response({'user_id': data[1], 'message': data[0]}, status=200)
+        return Response({'user_id': data[1], 'message': data[0]})
 
     @action(methods=['post'], detail=False)
     def test_verify_code(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.save()
-        return Response(data, status=200)
+        return Response(data)
 
     @action(methods=['post'], detail=False)
     def verify_code(self, request, *args, **kwargs):
@@ -88,11 +87,9 @@ class AuthViewSet(viewsets.GenericViewSet):
         try:
             serializer.is_valid(raise_exception=True)
             data = serializer.save()
-        except ValidationError:
+        except (ValidationError, BaseAPIException):
             raise
-        except BaseAPIException as e:
-            raise
-        return Response(data, status=200)
+        return Response(data)
 
     @action(methods=['post'], detail=True, permission_classes=[IsAdmin])
     def activate(self, request, *args, **kwargs):
@@ -104,16 +101,16 @@ class AuthViewSet(viewsets.GenericViewSet):
                 driver.user.complete_profile = True
                 driver.user.save()
                 Balance.objects.create(driver=driver)
-            return Response({'message': "user activated"}, status=200)
-        except:
-            raise BaseAPIException("Foydalanuvchi topilmadi")
+            return Response({'message': 'user activated'})
+        except Exception:
+            from utils.error_codes import DRIVER_NOT_FOUND
+            raise BaseAPIException("Driver not found", code=DRIVER_NOT_FOUND)
 
     @transaction.atomic
     @action(methods=['post'], detail=False, permission_classes=[IsActive])
     def logout(self, request, *args, **kwargs):
         request.auth.delete()
-        return JsonResponse(BaseSuccess().to_dict())
-
+        return success_response()
 
 
 @method_decorator(transaction.non_atomic_requests, name='dispatch')
@@ -128,16 +125,16 @@ class AuthViewSet(viewsets.GenericViewSet):
         summary="Update driver profile",
         description="Partially updates the logged-in driver's profile.",
         request=serializers.DriverSerializer,
-        responses={200: {'type': 'object', 'properties':{"message":{'type': 'string', 'example': 'user updated'}}}},
+        responses={200: {'type': 'object', 'properties': {"message": {'type': 'string', 'example': 'user updated'}}}},
         tags=["Drivers"],
     ),
-
 )
-
-class DriverViewSet(viewsets.ModelViewSet):
-    queryset = Driver.objects.select_related('user').prefetch_related('car_images','car_tex_passport_images','license_images')
+class DriverViewSet(SuccessResponseMixin, viewsets.ModelViewSet):
+    queryset = Driver.objects.select_related('user').prefetch_related(
+        'car_images', 'car_tex_passport_images', 'license_images'
+    )
     serializer_class = serializers.DriverSerializer
-    http_method_names = ['patch','delate','get']
+    http_method_names = ['patch', 'delate', 'get']
     permission_classes = (IsActive,)
 
     def get_serializer(self, *args, **kwargs):
@@ -146,16 +143,15 @@ class DriverViewSet(viewsets.ModelViewSet):
         return serializer_class(*args, **kwargs)
 
     def list(self, request, *args, **kwargs):
-        driver = Driver.objects.select_related("user").get(user = request.user)
-        serializer = serializers.DriverProfileSerialzer(driver,context={'request': request})
+        driver = Driver.objects.select_related("user").get(user=request.user)
+        serializer = serializers.DriverProfileSerialzer(driver, context={'request': request})
         return Response(serializer.data)
+
 
 @extend_schema_view(
     list=extend_schema(
         summary="Get client profile(s)",
-        description=(
-            "- **Regular user**: returns their own client profile"
-        ),
+        description="- **Regular user**: returns their own client profile",
         responses={200: serializers.ClientSerializer(many=True)},
         tags=["Clients"],
     ),
@@ -170,11 +166,11 @@ class DriverViewSet(viewsets.ModelViewSet):
         tags=["Clients"],
     ),
 )
-class ClientViewSet(viewsets.ModelViewSet):
+class ClientViewSet(SuccessResponseMixin, viewsets.ModelViewSet):
     queryset = Client.objects.select_related('user')
     serializer_class = serializers.ClientSerializer
     permission_classes = (IsActive,)
-    http_method_names = ['post','get']
+    http_method_names = ['post', 'get']
 
     def create(self, request, *args, **kwargs):
         serializer = serializers.ClientProfileUpdateSerializer(data=request.data)
@@ -188,14 +184,14 @@ class ClientViewSet(viewsets.ModelViewSet):
             client.user.complete_profile = True
 
         client.user.save()
-
         return Response(self.get_serializer(client).data)
 
     def list(self, request, *args, **kwargs):
-        client = Client.objects.select_related("user").get(user = request.user)
+        client = Client.objects.select_related("user").get(user=request.user)
         serializer = self.get_serializer(client)
         return Response(serializer.data)
-        
+
+
 @extend_schema_view(
     retrieve=extend_schema(
         parameters=[
@@ -218,11 +214,10 @@ class ClientViewSet(viewsets.ModelViewSet):
         ]
     )
 )
-class DriverAvailabelServiceView(viewsets.ModelViewSet):
-    http_method_names = ['get','patch']
-    permission_classes = (IsActive,CanChangeStatus)
+class DriverAvailabelServiceView(SuccessResponseMixin, viewsets.ModelViewSet):
+    http_method_names = ['get', 'patch']
+    permission_classes = (IsActive, CanChangeStatus)
     serializer_class = serializers.DriverServiceSerializer
-    
+
     def get_queryset(self):
-        return DriverAvailableService.objects.filter(driver__user = self.request.user)
-        
+        return DriverAvailableService.objects.filter(driver__user=self.request.user)

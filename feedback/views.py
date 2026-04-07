@@ -1,10 +1,13 @@
-from rest_framework import viewsets,response,status
-from .serializers import FeedbackSerializer,ResonSerializer,Reson
-from users.permissions import IsActive
-from users.models import Driver
-from .tasks import calculate_mark
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from drf_spectacular.utils import extend_schema, extend_schema_view
+
+from utils.responses import SuccessResponseMixin, error_response
+from utils.error_codes import METHOD_NOT_ALLOWED
+from users.permissions import IsActive
+from users.models import Driver
+from .serializers import FeedbackSerializer, ResonSerializer, Reson
+from .tasks import calculate_mark
 
 
 @extend_schema_view(
@@ -23,31 +26,31 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
         responses={200: {'type': 'object', 'properties': {'mark': {'type': 'number', 'example': 4.5}}}},
     )
 )
-class FeedBackView(viewsets.ViewSet):
+class FeedBackView(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = (IsActive,)
 
-    def create(self,request):
+    def create(self, request):
         serializer = FeedbackSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         if request.user.role == 'client':
             feedback_type = 'client'
-            
         elif request.user.role == 'driver':
             feedback_type = 'driver'
 
-        serializer.save(type= feedback_type)
-        
+        serializer.save(type=feedback_type)
+
         if feedback_type == 'client':
             calculate_mark.delay(serializer.instance.order.driver.id)
-            
-        return response.Response(serializer.data,status=status.HTTP_200_OK)
-        
-    def list(self,request):
-        if request.user.role == 'driver':
-            driver = Driver.objects.get(user = request.user).mark
-            return response.Response({"mark":driver},status=status.HTTP_200_OK)
-        else:
-            return response.Response({"error":"method not allowed"},status=status.HTTP_403_FORBIDDEN)
+
+        from rest_framework.response import Response
+        return Response(serializer.data)
+
+    def list(self, request):
+        if request.user.role != 'driver':
+            return error_response(METHOD_NOT_ALLOWED, "Only drivers can access this endpoint", status=403)
+        driver_mark = Driver.objects.get(user=request.user).mark
+        from rest_framework.response import Response
+        return Response({'mark': driver_mark})
 
 
 @extend_schema_view(
@@ -62,17 +65,19 @@ class FeedBackView(viewsets.ViewSet):
         responses={200: ResonSerializer(many=True)}
     ),
 )
-class ReasonView(viewsets.ViewSet):
+class ReasonView(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = (IsActive,)
 
-    @action(methods=['GET'],detail=False)
-    def feedback(self,request):
-        reasons = Reson.objects.filter(type = Reson.ResonType.PROBLEM)
-        serializer = ResonSerializer(reasons,many=True)
-        return response.Response(serializer.data,status=status.HTTP_200_OK)
+    @action(methods=['GET'], detail=False)
+    def feedback(self, request):
+        reasons = Reson.objects.filter(type=Reson.ResonType.PROBLEM)
+        serializer = ResonSerializer(reasons, many=True)
+        from rest_framework.response import Response
+        return Response(serializer.data)
 
-    @action(methods=['GET'],detail=False)
-    def comfort(self,request):
-        reasons = Reson.objects.filter(type = Reson.ResonType.COMFORT)
-        serializer = ResonSerializer(reasons,many=True)
-        return response.Response(serializer.data,status=status.HTTP_200_OK)
+    @action(methods=['GET'], detail=False)
+    def comfort(self, request):
+        reasons = Reson.objects.filter(type=Reson.ResonType.COMFORT)
+        serializer = ResonSerializer(reasons, many=True)
+        from rest_framework.response import Response
+        return Response(serializer.data)

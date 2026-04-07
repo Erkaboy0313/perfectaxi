@@ -1,17 +1,18 @@
 # Create your tasks here
 from celery import shared_task
-from utils.findDrivers import findCloseDriver,findAvailableDrivers
+from utils.findDrivers import findCloseDriver, findAvailableDrivers
 from asgiref.sync import async_to_sync
-from utils.cache_functions import sgetKey,ssetKey
-from channels.layers import get_channel_layer 
+from utils.cache_functions import sgetKey, ssetKey
+from channels.layers import get_channel_layer
 from order.models import Order
 from users.models import Driver
 from pricing.models import PricingDriver
-from payment.models import Balance,Charge
+from payment.models import Balance, Charge
 from utils.cordinates import remove_location
 from .models import SearchRadius
-import time,pytz
-from datetime import datetime,timedelta
+from .ws_codes import WS_INSUFFICIENT_FUND
+import time, pytz
+from datetime import datetime, timedelta
 from category.models import Log
 
 tz = pytz.timezone("UTC")
@@ -247,8 +248,9 @@ def insufficientfund(driver_id):
     return async_to_sync(channel_layer.group_send)(
         f"driver_{driver_id}",
         {
-            'type':'send_error',
-            'message': {"error_text":"Insufficient Fund"}
+            'type': 'send_error',
+            'message': "Insufficient Fund",
+            'code': WS_INSUFFICIENT_FUND,
         }
     )
 

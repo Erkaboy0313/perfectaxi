@@ -78,4 +78,5 @@ class CalculatePrice(APIView):
             service_list=service
         )
 
-        return Response( costs )
+        from utils.responses import success_response
+        return success_response(costs)

@@ -1,0 +1,125 @@
+PerfectTaxi API – Error Codes
+==============================
+
+All error responses share this JSON structure:
+  {
+    "code": "<ERROR_CODE>",
+    "error_message": "<human readable message (may be in Uzbek/Russian/English)>"
+  }
+
+All success responses share this JSON structure:
+  {
+    "code": "success",
+    "data": <response payload>
+  }
+
+──────────────────────────────────────────────────────────────────────────────
+CODE                    HTTP    DESCRIPTION
+──────────────────────────────────────────────────────────────────────────────
+
+── Authentication & Authorization ────────────────────────────────────────────
+
+NOT_AUTHENTICATED       401     Request has no valid auth token.
+                                Use this code to redirect user to login screen.
+
+ACCOUNT_INACTIVE        403     Token is valid but the account is not yet
+                                verified or confirmed.
+
+USER_BLOCKED            403     The account has been blocked by an admin.
+                                Show a "your account is blocked" message.
+
+PERMISSION_DENIED       403     Authenticated, but the user's role does not
+                                allow this action.
+
+FORBIDDEN               403     Generic forbidden – no further detail available.
+
+── User & Verification ───────────────────────────────────────────────────────
+
+USER_NOT_FOUND          400     No user found for the given phone / role / ID.
+                                Raised during login, code verification, and
+                                admin driver activation.
+
+DRIVER_NOT_FOUND        400     Driver record not found (e.g. during activation).
+
+INVALID_CODE            400     The SMS verification code entered is wrong.
+                                Prompt user to re-enter or resend the code.
+
+── Request Issues ────────────────────────────────────────────────────────────
+
+METHOD_NOT_ALLOWED      403     The HTTP method or action is not allowed for
+                                the current user role (e.g. driver calling a
+                                client-only endpoint).
+
+VALIDATION_ERROR        400     Request body failed DRF field validation.
+                                `error_message` contains the first failing
+                                field's error so the frontend can display it.
+
+── Business Logic ────────────────────────────────────────────────────────────
+
+SERVICE_ALREADY_EXISTS  400     Driver tried to add a CarService that is
+                                already registered for them.
+
+── General ───────────────────────────────────────────────────────────────────
+
+SERVER_ERROR            400/500 An unhandled or unexpected server-side error.
+                                Report to backend team with the full request.
+
+──────────────────────────────────────────────────────────────────────────────
+Source of truth: utils/error_codes.py
+──────────────────────────────────────────────────────────────────────────────
+
+
+══════════════════════════════════════════════════════════════════════════════
+WebSocket (ws/) Message Codes  –  integers
+══════════════════════════════════════════════════════════════════════════════
+
+All WS success messages share this JSON structure:
+  {
+    "code": 1,
+    "action": "<action_name>",
+    "data": <payload>
+  }
+
+All WS error messages share this JSON structure:
+  {
+    "code": <negative integer>,
+    "error_message": "<human readable message>"
+  }
+
+──────────────────────────────────────────────────────────────────────────────
+CODE    VALUE   DESCRIPTION
+──────────────────────────────────────────────────────────────────────────────
+
+── Success ───────────────────────────────────────────────────────────────────
+
+WS_SUCCESS              1   All successful WebSocket messages carry this code.
+
+── Authentication & Authorization ───────────────────────────────────────────
+
+WS_INVALID_TOKEN       -1   Connection opened without a valid auth token.
+                            Frontend should redirect to login.
+
+WS_USER_NOT_VERIFIED   -2   Driver connected but account not yet verified by admin.
+                            Show "pending verification" screen.
+
+WS_INSUFFICIENT_FUND   -3   Driver balance too low to go online or accept orders.
+                            Show "top up balance" prompt.
+                            Also sent from background task (insufficientfund).
+
+── Order Flow ────────────────────────────────────────────────────────────────
+
+WS_ORDER_NOT_FOUND     -4   Requested order_id does not exist or no longer active.
+                            Raised during: arrive, start, finish, miss_order.
+
+WS_ORDER_TAKEN         -5   Driver tried to accept an order already taken by someone else.
+                            Raised during: get_order.
+
+WS_PRICE_CALC_FAILED   -6   Route/service price calculation failed.
+                            Raised during: new_order. Ask user to retry.
+
+WS_CANCEL_FAILED       -7   Cancel drive command failed (e.g. order already finished).
+                            Raised during: cancel_drive.
+
+──────────────────────────────────────────────────────────────────────────────
+Source of truth: ws/ws_codes.py
+──────────────────────────────────────────────────────────────────────────────

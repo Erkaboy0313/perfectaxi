@@ -1,10 +1,11 @@
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from PerfectTaxi.exceptions import BaseAPIException
-from .models import User,Driver,Client,Code,DocumentImages,DriverAvailableService
+from utils.error_codes import USER_NOT_FOUND, USER_BLOCKED, INVALID_CODE
+from .models import User, Driver, Client, Code, DocumentImages, DriverAvailableService
 from rest_framework.validators import UniqueTogetherValidator
 from category.models import CarService
-from category.serializers import CarBrendSerializer,CarModelSerializer,ColorSerializer
+from category.serializers import CarBrendSerializer, CarModelSerializer, ColorSerializer
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,11 +57,11 @@ class LoginSerializer(serializers.Serializer):
     def save(self, **kwargs):
         data = self.validated_data
         try:
-            user: User = User.objects.get(phone=data['phone'],role=data['role'])
+            user: User = User.objects.get(phone=data['phone'], role=data['role'])
         except BaseException:
-            raise BaseAPIException("Foydalanuvchi topilmadi")
+            raise BaseAPIException("Foydalanuvchi topilmadi", code=USER_NOT_FOUND)
         if user.blocked_at:
-            raise BaseAPIException("Foydalanuvchi bloklangan")
+            raise BaseAPIException("Foydalanuvchi bloklangan", code=USER_BLOCKED)
         
         if data['role'] == user.UserRole.DRIVER:
             r_user = Driver.objects.get(user=user)
@@ -89,14 +90,14 @@ class TestVerifySerializer(serializers.Serializer):
                 user = Client.objects.get(id = data['user']).user
                 
             if int(data['code']) != 66666:
-                raise BaseAPIException('Kod notogri kiritildi')
+                raise BaseAPIException('Kod notogri kiritildi', code=INVALID_CODE)
             if user.is_block:
-                raise BaseAPIException("Foydalanuvchi bloklangan")
+                raise BaseAPIException("Foydalanuvchi bloklangan", code=USER_BLOCKED)
             if not user.confirmed_at:
                 user.confirm
         except BaseException as e:
             print(e)
-            raise BaseAPIException("Foydalanuvchi topilmadi")
+            raise BaseAPIException("Foydalanuvchi topilmadi", code=USER_NOT_FOUND)
         token, __ = Token.objects.get_or_create(user=user)
         return {'token': token.key, "profile":user.complete_profile}
 
@@ -109,13 +110,13 @@ class VerifySerializer(serializers.Serializer):
             user: User = User.objects.get(id = user)
             orginal_code = Code.objects.get(user = user)
             if int(self.validated_data['code']) != orginal_code.number:
-                raise BaseAPIException('Kod notogri kiritildi')
+                raise BaseAPIException('Kod notogri kiritildi', code=INVALID_CODE)
             if user.blocked_at:
-                raise BaseAPIException("Foydalanuvchi bloklangan")
+                raise BaseAPIException("Foydalanuvchi bloklangan", code=USER_BLOCKED)
         except BaseException:
-            raise BaseAPIException("Foydalanuvchi topilmadi")
+            raise BaseAPIException("Foydalanuvchi topilmadi", code=USER_NOT_FOUND)
         if user.blocked_at:
-            raise BaseAPIException("Foydalanuvchi bloklangan")
+            raise BaseAPIException("Foydalanuvchi bloklangan", code=USER_BLOCKED)
         token, __ = Token.objects.get_or_create(user=user)
         return {'token': token.key}
 

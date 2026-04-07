@@ -104,6 +104,7 @@ REST_FRAMEWORK = {
     ],
     'DATETIME_FORMAT': '%d-%m-%Y %H:%M:%S',
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    'EXCEPTION_HANDLER': 'utils.exceptions.custom_exception_handler',
 }
 
 SPECTACULAR_SETTINGS = {

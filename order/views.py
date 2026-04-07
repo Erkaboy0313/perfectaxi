@@ -1,11 +1,16 @@
-from rest_framework import viewsets,status
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from .models import Services,Order,RejectReason,DriverOrderHistory,Point
-from .serializers import ServiceSerializer,ClientOrderHistory,DriverOrderHistorySerializer,\
-    ReasonSerializer,DriverWeeklyOrderHistorySerializer
-from users.permissions import IsActive,IsDriver
-from django.db.models import F, ExpressionWrapper, fields ,Func,OuterRef,Subquery
 from drf_spectacular.utils import extend_schema, extend_schema_view
+
+from utils.responses import SuccessResponseMixin
+from users.permissions import IsActive, IsDriver
+from .models import Services, Order, RejectReason, DriverOrderHistory, Point
+from .serializers import (
+    ServiceSerializer, ClientOrderHistory, DriverOrderHistorySerializer,
+    ReasonSerializer, DriverWeeklyOrderHistorySerializer,
+)
+from django.db.models import F, ExpressionWrapper, fields, Func, OuterRef, Subquery
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -14,18 +19,18 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
         responses={200: ServiceSerializer(many=True)}
     )
 )
-class ServicesView(viewsets.ViewSet):
+class ServicesView(SuccessResponseMixin, viewsets.ViewSet):
 
-    def list(self,request):
+    def list(self, request):
         services = Services.objects.all()
-        serializer = ServiceSerializer(services,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
+        serializer = ServiceSerializer(services, many=True)
+        return Response(serializer.data)
 
 
 class TimeDiffInSeconds(Func):
     function = 'EXTRACT'
     template = '%(function)s(MINUTE FROM %(expressions)s)'
- 
+
 
 @extend_schema(
     summary="Driver order history",
@@ -33,10 +38,7 @@ class TimeDiffInSeconds(Func):
     responses={200: DriverOrderHistorySerializer(many=True)},
     tags=['Orders']
 )
-class DriverOrderHistoryViewSet(viewsets.ViewSet):
-    """
-    Returns the completed order history for the logged-in driver, including time and price calculations.
-    """
+class DriverOrderHistoryViewSet(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = (IsActive, IsDriver)
 
     def list(self, request):
@@ -52,7 +54,7 @@ class DriverOrderHistoryViewSet(viewsets.ViewSet):
             )
         )
         serializer = DriverOrderHistorySerializer(driver_orders, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.data)
 
 
 @extend_schema(
@@ -61,16 +63,13 @@ class DriverOrderHistoryViewSet(viewsets.ViewSet):
     responses={200: ClientOrderHistory(many=True)},
     tags=['Orders']
 )
-class ClientOrderHistoryViewSet(viewsets.ViewSet):
-    """
-    Returns the order history for the logged-in client, including related driver and service info.
-    """
+class ClientOrderHistoryViewSet(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = (IsActive,)
 
     def list(self, request):
         orders = Order.objects.filter(client__user=request.user).prefetch_related('driver', 'carservice')
         serializer = ClientOrderHistory(orders, many=True)
-        return Response(serializer.data, status=200)
+        return Response(serializer.data)
 
 
 @extend_schema_view(
@@ -79,36 +78,34 @@ class ClientOrderHistoryViewSet(viewsets.ViewSet):
         description="Returns all possible reasons for rejecting an order.",
         responses={200: ReasonSerializer(many=True)}
     )
-)  
-class RejectReasonView(viewsets.ViewSet):
+)
+class RejectReasonView(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = (IsActive,)
-    
-    def list(self,request):
+
+    def list(self, request):
         resons = RejectReason.objects.all()
-        serializer = ReasonSerializer(resons,many=True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
-
-
-
+        serializer = ReasonSerializer(resons, many=True)
+        return Response(serializer.data)
 
 
 @extend_schema_view(
     list=extend_schema(
         summary="Driver weekly report",
         description=(
-            "Returns a summary of the driver’s completed orders for the last 7 days. "
+            "Returns a summary of the driver's completed orders for the last 7 days. "
             "Only accessible to users with driver role."
         ),
         responses={200: DriverWeeklyOrderHistorySerializer(many=True)}
     )
 )
-class DriverWeeklyReportView(viewsets.ViewSet):
-    permission_classes = (IsActive,IsDriver)
-    
-    def list(self,request):
+class DriverWeeklyReportView(SuccessResponseMixin, viewsets.ViewSet):
+    permission_classes = (IsActive, IsDriver)
+
+    def list(self, request):
         data = DriverOrderHistory.report.get_last_7_days_report(request.user)
-        serializer = DriverWeeklyOrderHistorySerializer(data,many = True)
-        return Response(serializer.data,status=status.HTTP_200_OK)
+        serializer = DriverWeeklyOrderHistorySerializer(data, many=True)
+        return Response(serializer.data)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -133,10 +130,7 @@ class DriverWeeklyReportView(viewsets.ViewSet):
         }
     )
 )
-class LastDestinationsViewSet(viewsets.ViewSet):
-    """
-    A ViewSet to fetch the last 5 destinations (point and address) of a logged-in client.
-    """
+class LastDestinationsViewSet(SuccessResponseMixin, viewsets.ViewSet):
     permission_classes = [IsActive]
 
     def list(self, request, *args, **kwargs):
@@ -154,11 +148,11 @@ class LastDestinationsViewSet(viewsets.ViewSet):
         data = [
             {
                 "order_id": order.id,
-                "latitude":float(order.last_point.split(',')[0]),
-                "longitude":float(order.last_point.split(',')[1]),
-                "destination_address": order.last_point_address
+                "latitude": float(order.last_point.split(',')[0]),
+                "longitude": float(order.last_point.split(',')[1]),
+                "destination_address": order.last_point_address,
             }
             for order in orders_with_destinations
         ]
-        
+
         return Response(data)

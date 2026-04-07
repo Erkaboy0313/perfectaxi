@@ -1,6 +1,7 @@
 from rest_framework import permissions
 
 from PerfectTaxi.exceptions import BaseAPIException
+from utils.error_codes import USER_NOT_FOUND
 from users.models import User
 
 
@@ -45,7 +46,7 @@ class CanResetPassword(permissions.BasePermission):
         ).exists()
 
         if not exists_user:
-            raise BaseAPIException('Пользователь не найден')
+            raise BaseAPIException('Foydalanuvchi topilmadi', code=USER_NOT_FOUND)
         return True
 
 
