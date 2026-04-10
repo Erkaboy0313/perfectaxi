@@ -143,12 +143,12 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.environ.get('REDIS_HOST1',"127.0.0.1"), 6379)],
+            "hosts": [(os.environ.get('REDIS_HOST',"127.0.0.1"), 6379)],
         },
     },
 }
 
-CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST1","127.0.0.1")}:6379/0'
+CELERY_BROKER_URL = f'redis://{os.environ.get("REDIS_HOST","127.0.0.1")}:6379/0'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'default'
@@ -161,7 +161,7 @@ CORS_ALLOW_CREDENTIALS = True
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ.get('REDIS_HOST1','127.0.0.1')}:6379/1",
+        "LOCATION": f"redis://{os.environ.get('REDIS_HOST','127.0.0.1')}:6379/1",
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
         "KEY_PREFIX": "PTaxi",
     }

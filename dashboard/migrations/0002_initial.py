@@ -10,24 +10,24 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('chat', '0001_initial'),
+        ('dashboard', '0001_initial'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='message',
-            name='author',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-        ),
-        migrations.AddField(
-            model_name='room',
+            model_name='adminchatroom',
             name='users',
             field=models.ManyToManyField(to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
             model_name='message',
+            name='author',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='admin_messages', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AddField(
+            model_name='message',
             name='room',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='chat.room'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='dashboard.adminchatroom'),
         ),
     ]
