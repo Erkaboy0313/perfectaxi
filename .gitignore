@@ -129,3 +129,4 @@ dmypy.json
 media/
 staticfiles/
 .claude/
+utils/service-account.json
