@@ -5,7 +5,7 @@ from asgiref.sync import async_to_sync
 from utils.cache_functions import sgetKey, ssetKey
 from channels.layers import get_channel_layer
 from order.models import Order
-from users.models import Driver
+from users.models import Driver, User
 from pricing.models import PricingDriver
 from payment.models import Balance, Charge
 from utils.cordinates import remove_location
@@ -169,7 +169,12 @@ def sendOrderTodriverTask(order, location, service):
         order_data.update(extra_data)
         
         setRedisKeys.delay(order_data,driver["id"],'new')
-        
+
+        fcm_token = User.objects.filter(id=driver['id']).values_list('fcm_token', flat=True).first()
+        if fcm_token:
+            from notification.tasks import send_push_notification
+            send_push_notification.delay([fcm_token], 'Yangi buyurtma!', f"Buyurtma #{order_id}")
+
         async_to_sync(channel_layer.group_send)(
             f"driver_{driver['id']}",
             {

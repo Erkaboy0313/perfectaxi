@@ -32,6 +32,7 @@ class User(AbstractUser,ModelWithTimestamps):
     is_block = models.BooleanField(default=False)
     complete_profile = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    fcm_token = models.CharField(max_length=255, null=True, blank=True)
     last_login = None
     admin_name = None
 

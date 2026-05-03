@@ -228,6 +228,12 @@ class ServiceSerializer(serializers.ModelSerializer):
         model = CarService
         fields = ['id','service']
 
+class FCMTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['fcm_token']
+
+
 class DriverServiceSerializer(serializers.ModelSerializer):
     
     class Meta:

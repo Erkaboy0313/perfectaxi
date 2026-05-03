@@ -38,6 +38,7 @@ router.register(r'last-point',LastDestinationsViewSet, basename='last-point')
 
 urlpatterns = [
     path('api/v1/calculate-price/', CalculatePrice.as_view(), name='calculate-price'),
+    path('api/v1/fcm-token/', views.FCMTokenView.as_view(), name='fcm-token'),
     path('api/v1/', include(router.urls)),
     path('api/v1/', include(category_router.urls)),
 ]

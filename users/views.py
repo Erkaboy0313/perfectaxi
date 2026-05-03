@@ -3,7 +3,9 @@ from django.utils.decorators import method_decorator
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiTypes
 
 from utils.responses import SuccessResponseMixin, success_response
@@ -221,3 +223,44 @@ class DriverAvailabelServiceView(SuccessResponseMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         return DriverAvailableService.objects.filter(driver__user=self.request.user)
+
+
+@extend_schema(
+    summary="Register / update FCM push token",
+    description=(
+        "Saves the device's FCM token against the authenticated user. "
+        "Call this on every app launch or whenever the token is refreshed by the FCM SDK. "
+        "The token is used to deliver push notifications (e.g. new order alerts for drivers).\n\n"
+        "**Error cases:**\n"
+        "- `401 Unauthorized` — missing or invalid `Authorization: Token <key>` header.\n"
+        "- `400 Bad Request` — `fcm_token` field missing or exceeds 255 characters.\n"
+    ),
+    request=serializers.FCMTokenSerializer,
+    responses={
+        204: None,
+        400: {
+            'type': 'object',
+            'properties': {
+                'fcm_token': {
+                    'type': 'array',
+                    'items': {'type': 'string'},
+                    'example': ['This field is required.'],
+                }
+            },
+        },
+        401: {
+            'type': 'object',
+            'properties': {
+                'detail': {'type': 'string', 'example': 'Authentication credentials were not provided.'}
+            },
+        },
+    },
+)
+class FCMTokenView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def patch(self, request):
+        serializer = serializers.FCMTokenSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(status=204)
